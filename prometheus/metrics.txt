@@ -1,6 +1,15 @@
-# HELP senders_count Number of distinct receivers
-# TYPE senders_count counter
-senders_count{chain_id="137", sender="0x09e4f0ae44d5e60d44a8928af7531e6a862290bc"} 19
+# HELP receivers_count Number of distinct receivers
+# TYPE receivers_count counter
+receivers_count{chain_id="17000", receiver="0x001111a27323e8fba0176393d03714c0f7467e2b"} 30
 # HELP erc20_transferred Number of distinct receivers
 # TYPE erc20_transferred counter
-erc20_transferred{chain_id="137", sender="0x09e4f0ae44d5e60d44a8928af7531e6a862290bc"} 0.000000029482970684
+erc20_transferred{chain_id="17000", sender="0x001111a27323e8fba0176393d03714c0f7467e2b"} 0
+# HELP payment_count Number of distinct payments
+# TYPE payment_count counter
+payment_count{chain_id="17000", sender="0x001111a27323e8fba0176393d03714c0f7467e2b"} 0
+# HELP transaction_count Number of web3 transactions
+# TYPE transaction_count counter
+transaction_count{chain_id="17000", sender="0x001111a27323e8fba0176393d03714c0f7467e2b"} 4
+# HELP fee_paid Total fee paid
+# TYPE fee_paid counter
+fee_paid{chain_id="17000", sender="0x001111a27323e8fba0176393d03714c0f7467e2b"} 0

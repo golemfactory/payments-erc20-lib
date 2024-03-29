@@ -7,7 +7,7 @@ use web3::contract::tokens::Tokenize;
 use web3::contract::Contract;
 use web3::transports::Http;
 use web3::types::{Address, U256};
-use web3::{Transport, Web3};
+use web3::{ethabi, Transport, Web3};
 
 // todo remove DUMMY_RPC_PROVIDER and use ABI instead
 // todo change to once_cell
@@ -26,6 +26,8 @@ lazy_static! {
     };
     pub static ref LOCK_CONTRACT_TEMPLATE: Contract<Http> =
         prepare_contract_template(include_bytes!("../contracts/lock_payments.json")).unwrap();
+    pub static ref DISTRIBUTOR_CONTRACT_TEMPLATE: Contract<Http> =
+        prepare_contract_template(include_bytes!("../contracts/distributor.json")).unwrap();
 }
 
 pub fn prepare_contract_template(json_abi: &[u8]) -> Result<Contract<Http>, PaymentError> {
@@ -70,6 +72,27 @@ pub fn encode_erc20_allowance(
     spender: Address,
 ) -> Result<Vec<u8>, web3::ethabi::Error> {
     contract_encode(&ERC20_CONTRACT_TEMPLATE, "allowance", (owner, spender))
+}
+
+pub fn encode_distribute(
+    recipients: &[Address],
+    amounts: &[U256],
+) -> Result<Vec<u8>, web3::ethabi::Error> {
+    if recipients.len() != amounts.len() {
+        return Err(web3::ethabi::Error::InvalidData);
+    }
+    let mut bytes = Vec::with_capacity(recipients.len() * 20);
+    for recipient in recipients {
+        bytes.extend_from_slice(recipient.as_bytes());
+    }
+    // convert to abi encoded bytes
+    let bytes = ethabi::Bytes::from(bytes);
+
+    contract_encode(
+        &DISTRIBUTOR_CONTRACT_TEMPLATE,
+        "distribute",
+        (bytes, amounts.to_vec()),
+    )
 }
 
 pub fn encode_faucet_create() -> Result<Vec<u8>, web3::ethabi::Error> {

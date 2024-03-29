@@ -1,7 +1,7 @@
 use crate::signer::{Signer, SignerAccount};
 use crate::transaction::{
-    create_create_deposit, create_faucet_mint, create_terminate_deposit, create_token_transfer,
-    find_receipt_extended, FindReceiptParseResult,
+    create_create_deposit, create_distribute_transaction, create_faucet_mint,
+    create_terminate_deposit, create_token_transfer, find_receipt_extended, FindReceiptParseResult,
 };
 use crate::{err_custom_create, err_from};
 use erc20_payment_lib_common::create_sqlite_connection;
@@ -951,6 +951,32 @@ impl PaymentRuntime {
         Ok(())
     }
 
+    pub async fn distribute_gas(
+        &self,
+        chain_name: &str,
+        from: Address,
+    ) -> Result<(), PaymentError> {
+        let chain_cfg = self.config.chain.get(chain_name).ok_or(err_custom_create!(
+            "Chain {} not found in config file",
+            chain_name
+        ))?;
+        let golem_address = chain_cfg.token.address;
+        let web3 = self.setup.get_provider(chain_cfg.chain_id)?;
+
+        let res = mint_golem_token(
+            web3,
+            &self.conn,
+            chain_cfg.chain_id as u64,
+            from,
+            golem_address,
+            chain_cfg.mint_contract.clone().map(|c| c.address),
+            false,
+        )
+        .await;
+        self.wake.notify_one();
+        res
+    }
+
     pub async fn mint_golem_token(
         &self,
         chain_name: &str,
@@ -1036,6 +1062,79 @@ impl VerifyTransactionResult {
     pub fn rejected(&self) -> bool {
         matches!(self, Self::Rejected { .. })
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn distribute_gas(
+    web3: Arc<Web3RpcPool>,
+    conn: &SqlitePool,
+    chain_id: u64,
+    from: Address,
+    distribute_contract_address: Option<Address>,
+    skip_balance_check: bool,
+    recipients: &[Address],
+    amounts: &[rust_decimal::Decimal],
+) -> Result<(), PaymentError> {
+    let distribute_contract_address =
+        if let Some(distribute_contract_address) = distribute_contract_address {
+            distribute_contract_address
+        } else {
+            return Err(err_custom_create!(
+                "Distribute contract address unknown. If not sure try on holesky network"
+            ));
+        };
+
+    if recipients.len() != amounts.len() {
+        return Err(err_custom_create!(
+            "recipients and amounts must have the same length"
+        ));
+    }
+
+    let mut amounts_u256: Vec<U256> = Vec::with_capacity(amounts.len());
+
+    let mut sum_u256 = U256::zero();
+    for amount in amounts {
+        let amount = amount
+            .to_u256_from_eth()
+            .map_err(|err| err_custom_create!("Invalid amount: {} - {}", amount, err))?;
+        amounts_u256.push(amount);
+        sum_u256 += amount;
+    }
+
+    if !skip_balance_check {
+        //todo check if we have enough gas + token to distribute
+        let get_eth_balance = web3
+            .clone()
+            .eth_balance(from, None)
+            .await
+            .map_err(err_from!())?
+            .to_eth_saturate();
+
+        if get_eth_balance < Decimal::from_f64(0.000001).unwrap() {
+            return Err(err_custom_create!(
+                "You need at least 0.000001 ETH to continue. You have {} ETH on network with chain id: {} and account {:#x} ",
+                get_eth_balance,
+                chain_id,
+                from
+            ));
+        }
+    }
+
+    let distribute_tx = create_distribute_transaction(
+        from,
+        distribute_contract_address,
+        chain_id,
+        None,
+        recipients,
+        &amounts_u256,
+    )?;
+    let distribute_tx = insert_tx(conn, &distribute_tx).await.map_err(err_from!())?;
+
+    log::info!(
+        "Distribute transaction added to queue: {}",
+        distribute_tx.id
+    );
+    Ok(())
 }
 
 pub async fn mint_golem_token(

@@ -143,6 +143,7 @@ token = { address = "0x8888888815bf4DB87e57B609A50f938311EEd068", symbol = "tGLM
 multi-contract = { address = "0xAaAAAaA00E1841A63342db7188abA84BDeE236c7", max-at-once = 10 }
 mint-contract = { address = "0xFACe100969FF47EB58d2CF603321B581A84bcEaC", max-glm-allowed = 400 }
 lock-contract = { address = "0xfe1B27Bac0e3Ad39d55C9459ae59894De847dcbf" }
+distributor-contract = { address = "0xb7Fb99e86f93dc3047A12932052236d853065173" }
 faucet-client = { max-eth-allowed = 0.009, faucet-srv = "_holesky-faucet._tcp", faucet-host = "faucet.testnet.golem.network", faucet-lookup-domain = "dev.golem.network", faucet-srv-port = 4002 }
 confirmation-blocks = 0
 block-explorer-url = "https://holesky.etherscan.io"

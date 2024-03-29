@@ -1,0 +1,53 @@
+name: Distribute tests
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "42 3 * * *"
+
+jobs:
+  test_deposit:
+    name: Test Distribute
+    timeout-minutes: 20
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "dev-build-cache"
+
+      - name: Build
+        run: |
+          cargo build
+          cp target/debug/erc20_processor /usr/local/bin/erc20_processor
+          [ $(which erc20_processor) == "/usr/local/bin/erc20_processor" ]
+
+      - name: Generate ethereum accounts
+        run: |
+          erc20_processor generate-key -n 5 > .env
+          cat .env | grep ETH_ADDRESS | sed "s/#\s//g" | sed "s/:\s/=/g" > $GITHUB_ENV
+
+      - name: Distribute ETH
+        run: |
+          erc20_processor distribute --amounts "0.0001;0.0001;0.0001;0.0001;0.0001" --recipients "$ETH_ADDRESS_0;$ETH_ADDRESS_1;$ETH_ADDRESS_2;$ETH_ADDRESS_3;$ETH_ADDRESS_4"
+          erc20_processor run
+        env:
+          ETH_PRIVATE_KEYS: ${{ secrets.HOLESKY_FUND_ENV }}
+
+      - name: Transfer all left ETH tokens
+        run: |
+          set -x 
+          erc20_processor show-config > config.toml.tmp
+          sed 's/^max-fee-per-gas = "20"$/max-fee-per-gas = "1.1"/' config.toml.tmp > config-payments.toml
+          erc20_processor transfer --account-no 0 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all
+          erc20_processor transfer --account-no 1 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all
+          erc20_processor transfer --account-no 2 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all
+          erc20_processor transfer --account-no 3 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all
+          erc20_processor transfer --account-no 4 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all
+          erc20_processor run

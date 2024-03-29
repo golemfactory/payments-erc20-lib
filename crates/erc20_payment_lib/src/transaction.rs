@@ -327,6 +327,29 @@ pub fn create_erc20_transfer_multi(multi_args: MultiTransferArgs) -> Result<TxDb
     })
 }
 
+pub fn create_distribute_transaction(
+    from: Address,
+    faucet_address: Address,
+    chain_id: u64,
+    gas_limit: Option<u64>,
+    recipients: &[Address],
+    amounts: &[U256],
+) -> Result<TxDbObj, PaymentError> {
+    let sum_amounts = amounts.iter().fold(U256::zero(), |acc, x| acc + x);
+    Ok(TxDbObj {
+        method: "DISTRIBUTOR.distribute".to_string(),
+        from_addr: format!("{from:#x}"),
+        to_addr: format!("{faucet_address:#x}"),
+        chain_id: chain_id as i64,
+        gas_limit: gas_limit.map(|gas_limit| gas_limit as i64),
+        call_data: Some(hex::encode(
+            encode_distribute(recipients, amounts).map_err(err_from!())?,
+        )),
+        val: sum_amounts.to_string(),
+        ..Default::default()
+    })
+}
+
 pub fn create_faucet_mint(
     from: Address,
     faucet_address: Address,

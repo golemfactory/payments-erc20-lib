@@ -1,0 +1,69 @@
+[
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "addrs",
+                "type": "bytes"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "values",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "distribute",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "addrs",
+                "type": "bytes"
+            }
+        ],
+        "name": "distributeEqual",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "addrs",
+                "type": "bytes"
+            },
+            {
+                "internalType": "uint32[]",
+                "name": "values",
+                "type": "uint32[]"
+            }
+        ],
+        "name": "distributeEther",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "addrs",
+                "type": "bytes"
+            },
+            {
+                "internalType": "uint64[]",
+                "name": "values",
+                "type": "uint64[]"
+            }
+        ],
+        "name": "distributeGwei",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    }
+]

@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::btree_map::BTreeMap as Map;
 
 use rust_decimal::Decimal;
@@ -46,7 +46,7 @@ impl AdditionalOptions {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct Engine {
     pub process_interval: u64,
@@ -63,33 +63,39 @@ pub struct Engine {
     pub ignore_deadlines: bool,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Config {
     pub chain: Map<String, Chain>,
     pub engine: Engine,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct MultiContractSettings {
     pub address: Address,
     pub max_at_once: usize,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct MintContractSettings {
     pub address: Address,
     pub max_glm_allowed: Decimal,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct LockContractSettings {
     pub address: Address,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct DistributorContractSettings {
+    pub address: Address,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct FaucetClientSettings {
     pub max_eth_allowed: Decimal,
@@ -99,7 +105,7 @@ pub struct FaucetClientSettings {
     pub faucet_lookup_domain: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct RpcSettings {
     pub names: Option<String>,
@@ -115,7 +121,7 @@ pub struct RpcSettings {
     pub max_consecutive_errors: Option<u64>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct Chain {
     pub chain_name: String,
@@ -128,6 +134,7 @@ pub struct Chain {
     pub multi_contract: Option<MultiContractSettings>,
     pub mint_contract: Option<MintContractSettings>,
     pub lock_contract: Option<LockContractSettings>,
+    pub distributor_contract: Option<DistributorContractSettings>,
     pub faucet_client: Option<FaucetClientSettings>,
     pub transaction_timeout: u64,
     pub confirmation_blocks: u64,
@@ -138,7 +145,7 @@ pub struct Chain {
     pub external_source_check_interval: Option<u64>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Token {
     pub symbol: String,
     pub address: Address,
