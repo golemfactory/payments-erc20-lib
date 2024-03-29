@@ -17,7 +17,7 @@ pub struct SignerAccount {
     pub signer: Arc<Box<dyn Signer + Send + Sync>>,
     pub(crate) external_gather_time: Arc<Mutex<Option<DateTime<Utc>>>>,
     #[serde(skip)]
-    pub(crate) jh: Arc<Mutex<Option<JoinHandle<()>>>>,
+    pub(crate) jh: Arc<Mutex<Vec<Option<JoinHandle<()>>>>>,
 }
 
 impl Debug for SignerAccount {
@@ -38,17 +38,20 @@ impl SignerAccount {
             address,
             signer,
             external_gather_time: Arc::new(Mutex::new(None)),
-            jh: Arc::new(Mutex::new(None)),
+            jh: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
     pub fn is_active(&self) -> bool {
         let jh_guard = self.jh.lock().unwrap();
-        if let Some(jh_guard) = jh_guard.as_ref() {
-            !jh_guard.is_finished()
-        } else {
-            false
+        for jh in jh_guard.iter() {
+            if let Some(jh) = (*jh).as_ref() {
+                if !jh.is_finished() {
+                    return true;
+                }
+            }
         }
+        false
     }
 
     pub async fn check_if_sign_possible(&self) -> Result<(), PaymentError> {

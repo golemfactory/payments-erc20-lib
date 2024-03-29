@@ -9,6 +9,7 @@ use actix_web::http::header::HeaderValue;
 use actix_web::http::{header, StatusCode};
 use actix_web::web::Data;
 use actix_web::{web, HttpRequest, HttpResponse, Responder, Scope};
+use chrono::{DateTime, Utc};
 use erc20_payment_lib_common::ops::*;
 use erc20_payment_lib_common::utils::datetime_from_u256_timestamp;
 use erc20_payment_lib_common::{export_metrics_to_prometheus, FaucetData};
@@ -391,7 +392,7 @@ pub async fn transactions(data: Data<Box<ServerData>>, _req: HttpRequest) -> imp
     //todo: add limits
     let txs = {
         let db_conn = data.db_connection.lock().await;
-        return_on_error!(get_transactions(&*db_conn, None, None, None, None).await)
+        return_on_error!(get_transactions(&*db_conn, None, None, None, None, None).await)
     };
     web::Json(json!({
         "txs": txs,
@@ -439,7 +440,8 @@ pub async fn transactions_next(data: Data<Box<ServerData>>, req: HttpRequest) ->
                 None,
                 Some(TRANSACTION_FILTER_QUEUED),
                 limit,
-                Some(TRANSACTION_ORDER_BY_CREATE_DATE)
+                Some(TRANSACTION_ORDER_BY_CREATE_DATE),
+                None
             )
             .await
         )
@@ -461,7 +463,8 @@ pub async fn transactions_current(
                 None,
                 Some(TRANSACTION_FILTER_PROCESSING),
                 None,
-                Some(TRANSACTION_ORDER_BY_CREATE_DATE)
+                Some(TRANSACTION_ORDER_BY_CREATE_DATE),
+                None
             )
             .await
         )
@@ -489,7 +492,8 @@ pub async fn transactions_last_processed(
                 None,
                 Some(TRANSACTION_FILTER_DONE),
                 limit,
-                Some(TRANSACTION_ORDER_BY_FIRST_PROCESSED_DATE_DESC)
+                Some(TRANSACTION_ORDER_BY_FIRST_PROCESSED_DATE_DESC),
+                None
             )
             .await
         )
@@ -519,7 +523,8 @@ pub async fn transactions_feed(data: Data<Box<ServerData>>, req: HttpRequest) ->
                 None,
                 Some(TRANSACTION_FILTER_DONE),
                 limit_prev,
-                Some(TRANSACTION_ORDER_BY_FIRST_PROCESSED_DATE_DESC)
+                Some(TRANSACTION_ORDER_BY_FIRST_PROCESSED_DATE_DESC),
+                None
             )
             .await
         );
@@ -529,7 +534,8 @@ pub async fn transactions_feed(data: Data<Box<ServerData>>, req: HttpRequest) ->
                 None,
                 Some(TRANSACTION_FILTER_PROCESSING),
                 None,
-                Some(TRANSACTION_ORDER_BY_CREATE_DATE)
+                Some(TRANSACTION_ORDER_BY_CREATE_DATE),
+                None
             )
             .await
         );
@@ -539,7 +545,8 @@ pub async fn transactions_feed(data: Data<Box<ServerData>>, req: HttpRequest) ->
                 None,
                 Some(TRANSACTION_FILTER_QUEUED),
                 limit_next,
-                Some(TRANSACTION_ORDER_BY_CREATE_DATE)
+                Some(TRANSACTION_ORDER_BY_CREATE_DATE),
+                None
             )
             .await
         );
@@ -658,6 +665,153 @@ async fn new_transfer(
     log::warn!("Created transfer: {:?}", transfer_args);
 
     Ok("success".to_string())
+}
+
+#[derive(Deserialize)]
+pub struct StatsTransferRequest {
+    receiver: Option<String>,
+    from: Option<String>,
+    to: Option<String>,
+    chain: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct StatsTransferResult {
+    request_time: f64,
+    transfers: Vec<ChainTransferRespObj>,
+}
+
+#[derive(Serialize, sqlx::FromRow, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ChainTransferRespObj {
+    pub id: i64,
+    pub from_addr: String,
+    pub receiver_addr: String,
+    pub chain_id: i64,
+    pub token_addr: Option<String>,
+    pub token_amount: String,
+    pub tx_hash: String,
+    pub block_number: i64,
+    pub fee_paid: Option<String>,
+    pub block_date: DateTime<Utc>,
+    pub block_timestamp: i64,
+    pub to_addr: String,
+    pub caller_addr: String,
+}
+
+pub async fn stats_transfers(
+    data: Data<Box<ServerData>>,
+    info: web::Query<StatsTransferRequest>,
+) -> actix_web::Result<web::Json<StatsTransferResult>> {
+    let time_start = std::time::Instant::now();
+    let receiver = if info.receiver.clone() == Some("all".to_string()) {
+        None
+    } else {
+        let account = Address::from_str(
+            &info
+                .receiver
+                .clone()
+                .ok_or(actix_web::error::ErrorBadRequest("account not found"))?,
+        )
+        .map_err(|err| {
+            actix_web::error::ErrorBadRequest(format!("account has to be valid address {err}"))
+        })?;
+        Some(account)
+    };
+    let account_str = receiver.map(|account| format!("{:#x}", account));
+
+    let from = chrono::DateTime::from_timestamp(
+        i64::from_str(
+            &info
+                .from
+                .clone()
+                .ok_or(actix_web::error::ErrorBadRequest("From not found"))?,
+        )
+        .map_err(|err| {
+            actix_web::error::ErrorBadRequest(format!("From is not a valid timestamp {err}"))
+        })?,
+        0,
+    )
+    .ok_or(actix_web::error::ErrorBadRequest(
+        "From is not a valid timestamp.",
+    ))?;
+    let to = chrono::DateTime::from_timestamp(
+        i64::from_str(
+            &info
+                .to
+                .clone()
+                .ok_or(actix_web::error::ErrorBadRequest("To not found"))?,
+        )
+        .map_err(|err| {
+            actix_web::error::ErrorBadRequest(format!("To is not a valid timestamp {err}"))
+        })?,
+        0,
+    )
+    .ok_or(actix_web::error::ErrorBadRequest(
+        "To is not a valid timestamp.",
+    ))?;
+
+    let chain_id = i64::from_str(
+        &info
+            .chain
+            .clone()
+            .ok_or(actix_web::error::ErrorBadRequest("Chain id not found"))?,
+    )
+    .map_err(|err| actix_web::error::ErrorBadRequest(format!("Chain id a valid {err}")))?;
+
+    let conn = data.db_connection.lock().await.clone();
+    let transf = if let Some(receiver) = account_str.as_ref() {
+        let transf =
+            get_all_chain_transfers_by_receiver_ext(&conn, chain_id, from, to, receiver, None)
+                .await;
+        transf.map_err(|err| {
+            actix_web::error::ErrorBadRequest(format!("Unknown server error: {}", err))
+        })?
+    } else {
+        let transf = get_all_chain_transfers_ext(&conn, chain_id, from, to, None).await;
+        transf.map_err(|err| {
+            actix_web::error::ErrorBadRequest(format!("Unknown server error: {}", err))
+        })?
+    };
+
+    let mut resp = Vec::new();
+    for trans in transf.into_iter() {
+        let Some(blockchain_date) = trans.blockchain_date else {
+            continue;
+        };
+
+        if blockchain_date < from {
+            continue;
+        }
+        if let Some(account_str) = account_str.as_ref() {
+            if trans.receiver_addr != *account_str {
+                continue;
+            }
+        }
+
+        resp.push(ChainTransferRespObj {
+            id: trans.id,
+            from_addr: trans.from_addr,
+            receiver_addr: trans.receiver_addr,
+            chain_id: trans.chain_id,
+            token_addr: trans.token_addr,
+            token_amount: trans.token_amount,
+            tx_hash: trans.tx_hash,
+            block_number: trans.block_number,
+            fee_paid: trans.fee_paid,
+            block_date: blockchain_date,
+            block_timestamp: blockchain_date.timestamp(),
+            to_addr: trans.to_addr,
+            caller_addr: trans.caller_addr,
+        })
+    }
+
+    let time_end = time_start.elapsed().as_secs_f64();
+    //serialize
+    Ok(web::Json(StatsTransferResult {
+        request_time: time_end,
+        transfers: resp,
+    }))
 }
 
 pub async fn transfers(data: Data<Box<ServerData>>, req: HttpRequest) -> impl Responder {
@@ -1081,6 +1235,7 @@ pub fn runtime_web_scope(
         .route("/rpc_pool", web::get().to(rpc_pool))
         .route("/rpc_pool/metrics", web::get().to(rpc_pool_metrics))
         .route("/config", web::get().to(config_endpoint))
+        .route("/stats/transfers", web::get().to(stats_transfers))
         .route("/transactions", web::get().to(transactions))
         .route("/transactions/count", web::get().to(transactions_count))
         .route("/transactions/next", web::get().to(transactions_next))

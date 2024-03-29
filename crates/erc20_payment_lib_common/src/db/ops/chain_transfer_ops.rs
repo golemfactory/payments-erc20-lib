@@ -1,4 +1,6 @@
 use super::model::ChainTransferDbObj;
+use crate::model::ChainTransferDbObjExt;
+use chrono::{DateTime, Utc};
 use sqlx::Executor;
 use sqlx::Sqlite;
 use sqlx::SqlitePool;
@@ -28,15 +30,62 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *;
     .await?;
     Ok(res)
 }
+pub async fn get_all_chain_transfers_ext(
+    conn: &SqlitePool,
+    chain_id: i64,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+    limit: Option<i64>,
+) -> Result<Vec<ChainTransferDbObjExt>, sqlx::Error> {
+    let limit = limit.unwrap_or(i64::MAX);
+    let rows = sqlx::query_as::<_, ChainTransferDbObjExt>(
+        r"SELECT ct.*, cx.tx_hash, cx.block_number, cx.to_addr, cx.from_addr as caller_addr FROM chain_transfer as ct JOIN chain_tx as cx ON ct.chain_tx_id = cx.id WHERE ct.chain_id = $1 AND ct.blockchain_date >= $2 AND ct.blockchain_date <= $3 ORDER by id DESC LIMIT $4",
+    )
+        .bind(chain_id)
+        .bind(from)
+        .bind(to)
+        .bind(limit)
+        .fetch_all(conn)
+        .await?;
+    Ok(rows)
+}
+
+pub async fn get_all_chain_transfers_by_receiver_ext(
+    conn: &SqlitePool,
+    chain_id: i64,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+    receiver: &str,
+    limit: Option<i64>,
+) -> Result<Vec<ChainTransferDbObjExt>, sqlx::Error> {
+    let limit = limit.unwrap_or(i64::MAX);
+    let rows = sqlx::query_as::<_, ChainTransferDbObjExt>(
+        r"SELECT ct.*, cx.tx_hash, cx.block_number, cx.to_addr, cx.from_addr as caller_addr FROM chain_transfer as ct JOIN chain_tx as cx ON ct.chain_tx_id = cx.id WHERE ct.chain_id = $1 AND ct.blockchain_date >= $2 AND ct.blockchain_date <= $3 AND ct.receiver_addr = $4 ORDER by id DESC LIMIT $5",
+    )
+        .bind(chain_id)
+        .bind(from)
+        .bind(to)
+        .bind(receiver)
+        .bind(limit)
+        .fetch_all(conn)
+        .await?;
+    Ok(rows)
+}
 
 pub async fn get_all_chain_transfers(
     conn: &SqlitePool,
+    chain_id: i64,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
     limit: Option<i64>,
 ) -> Result<Vec<ChainTransferDbObj>, sqlx::Error> {
     let limit = limit.unwrap_or(i64::MAX);
     let rows = sqlx::query_as::<_, ChainTransferDbObj>(
-        r"SELECT * FROM chain_transfer ORDER by id DESC LIMIT $1",
+        r"SELECT * FROM chain_transfer WHERE chain_id = $1 AND blockchain_date >= $2 AND blockchain_date <= $3 ORDER by id DESC LIMIT $4",
     )
+        .bind(chain_id)
+    .bind(from)
+    .bind(to)
     .bind(limit)
     .fetch_all(conn)
     .await?;

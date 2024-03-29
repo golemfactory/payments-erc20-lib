@@ -136,6 +136,11 @@ pub async fn resolve_txt_record_to_string_array(record: &str) -> std::io::Result
         .collect::<Vec<_>>())
 }
 
+pub struct ChooseBestEndpointsResult {
+    pub allowed_endpoints: Vec<Index>,
+    pub is_resolving: bool,
+}
+
 impl Web3RpcPool {
     pub fn new(
         chain_id: u64,
@@ -327,10 +332,13 @@ impl Web3RpcPool {
             });
     }
 
-    pub async fn choose_best_endpoints(self: Arc<Self>) -> Vec<Index> {
-        self.external_sources_resolver
+    pub async fn choose_best_endpoints(self: Arc<Self>) -> ChooseBestEndpointsResult {
+        let task = self
+            .external_sources_resolver
             .clone()
             .start_resolve_if_needed(self.clone(), false);
+
+        let is_resolving = task.is_some();
 
         let endpoints_copy = self
             .endpoints
@@ -379,7 +387,10 @@ impl Web3RpcPool {
                 .clone()
                 .start_verify_if_needed(self.clone(), false);
 
-            allowed_endpoints
+            ChooseBestEndpointsResult {
+                allowed_endpoints,
+                is_resolving,
+            }
         } else {
             let self_cloned = self.clone();
             self_cloned
@@ -408,7 +419,10 @@ impl Web3RpcPool {
                     })
                     .map(|(idx, _element)| idx)
                 {
-                    return vec![el];
+                    return ChooseBestEndpointsResult {
+                        allowed_endpoints: vec![el],
+                        is_resolving,
+                    };
                 }
 
                 if is_finished {
@@ -417,7 +431,10 @@ impl Web3RpcPool {
                 tokio::time::sleep(std::time::Duration::from_millis(10)).await;
             }
             //no endpoint could be selected
-            vec![]
+            ChooseBestEndpointsResult {
+                allowed_endpoints: vec![],
+                is_resolving,
+            }
         }
     }
 

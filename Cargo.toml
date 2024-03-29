@@ -32,7 +32,7 @@ actix-web-actors = { version = "4", default-features = false }
 anyhow = "1"
 awc = { version = "3.1", features = ["rustls"] }
 base64 = "0.22"
-bollard = "0.16"
+bollard = "0.14"
 chrono = { version = "0.4", features = ["serde"] }
 csv = "1.2"
 dotenv = "0.15"

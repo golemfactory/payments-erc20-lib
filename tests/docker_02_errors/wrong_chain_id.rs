@@ -5,8 +5,8 @@ use erc20_payment_lib::signer::PrivateKeySigner;
 use erc20_payment_lib::transaction::create_token_transfer;
 use erc20_payment_lib_common::ops::insert_token_transfer;
 use erc20_payment_lib_common::utils::U256ConvExt;
+use erc20_payment_lib_common::DriverEvent;
 use erc20_payment_lib_common::DriverEventContent::*;
-use erc20_payment_lib_common::{DriverEvent, TransactionFailedReason};
 use erc20_payment_lib_test::*;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -27,7 +27,7 @@ async fn test_wrong_chain_id() -> Result<(), anyhow::Error> {
     let receiver_loop = tokio::spawn(async move {
         let mut transfer_finished_message_count = 0;
         let mut tx_confirmed_message_count = 0;
-        let mut tx_invalid_chain_id_message_count = 0;
+        let tx_invalid_chain_id_message_count = 0;
         let mut fee_paid = U256::from(0_u128);
         while let Some(msg) = receiver.recv().await {
             log::info!("Received message: {:?}", msg);
@@ -42,11 +42,8 @@ async fn test_wrong_chain_id() -> Result<(), anyhow::Error> {
                     log::info!("Transaction stuck: {:?}", reason);
                 },
                 TransactionFailed(reason) => {
+                    #[allow(clippy::match_single_binding)]
                     match reason {
-                        TransactionFailedReason::InvalidChainId(chain_id) => {
-                            log::info!("Invalid chain id: {chain_id}");
-                            tx_invalid_chain_id_message_count += 1;
-                        },
                         _ => {
                             log::error!("Unexpected transaction failed reason: {:?}", reason);
                             panic!("Unexpected transaction failed reason: {:?}", reason)
@@ -65,7 +62,7 @@ async fn test_wrong_chain_id() -> Result<(), anyhow::Error> {
             }
         }
 
-        assert!(tx_invalid_chain_id_message_count > 0);
+        assert!(tx_invalid_chain_id_message_count == 0);
         assert_eq!(tx_confirmed_message_count, 0);
         assert_eq!(transfer_finished_message_count, 0);
         fee_paid

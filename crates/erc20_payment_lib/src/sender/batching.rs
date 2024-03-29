@@ -17,10 +17,9 @@ use crate::{err_create, err_custom_create, err_from};
 use sqlx::SqlitePool;
 use tokio::sync::mpsc;
 
-use crate::runtime::send_driver_event;
 use crate::signer::SignerAccount;
 use erc20_payment_lib_common::model::TokenTransferDbObj;
-use erc20_payment_lib_common::{DriverEvent, DriverEventContent, TransactionFailedReason};
+use erc20_payment_lib_common::DriverEvent;
 use web3::types::{Address, U256};
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
@@ -50,13 +49,14 @@ pub struct TokenTransferMultiOrder {
 
 pub async fn gather_transactions_pre(
     account: &SignerAccount,
+    chain_id: i64,
     conn: &SqlitePool,
     payment_setup: &PaymentSetup,
     process_tx_needed: &mut bool,
 ) -> Result<TokenTransferMap, PaymentError> {
     let mut transfer_map = TokenTransferMap::new();
 
-    let mut token_transfers = get_pending_token_transfers(conn, account.address)
+    let mut token_transfers = get_pending_token_transfers(conn, account.address, chain_id)
         .await
         .map_err(err_from!())?;
 
@@ -382,7 +382,7 @@ pub async fn gather_transactions_batch_multi(
 }
 
 pub async fn gather_transactions_batch(
-    event_sender: Option<mpsc::Sender<DriverEvent>>,
+    _event_sender: Option<mpsc::Sender<DriverEvent>>,
     conn: &SqlitePool,
     payment_setup: &PaymentSetup,
     token_transfers: &mut [TokenTransferDbObj],
@@ -394,13 +394,6 @@ pub async fn gather_transactions_batch(
     }
 
     let Some(chain_setup) = payment_setup.chain_setup.get(&token_transfer.chain_id) else {
-        send_driver_event(
-            &event_sender,
-            DriverEventContent::TransactionFailed(TransactionFailedReason::InvalidChainId(
-                token_transfer.chain_id,
-            )),
-        )
-        .await;
         return Err(err_custom_create!(
             "No setup found for chain id: {}",
             token_transfer.chain_id

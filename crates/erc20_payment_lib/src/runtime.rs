@@ -36,7 +36,7 @@ use chrono::{DateTime, Utc};
 use erc20_payment_lib_common::model::TokenTransferDbObj;
 use erc20_payment_lib_common::{
     DriverEvent, DriverEventContent, FaucetData, SharedInfoTx, StatusProperty,
-    TransactionFailedReason, TransactionStuckReason, Web3RpcPoolContent,
+    TransactionStuckReason, Web3RpcPoolContent,
 };
 use erc20_rpc_pool::{Web3ExternalSources, Web3FullNodeData, Web3PoolType, Web3RpcPool};
 use rust_decimal::prelude::FromPrimitive;
@@ -125,12 +125,6 @@ impl StatusTracker {
         for old_property in status_props.iter_mut() {
             use StatusProperty::*;
             match (old_property, &new_property) {
-                (InvalidChainId { chain_id: id1 }, InvalidChainId { chain_id: id2 })
-                    if id1 == id2 =>
-                {
-                    return false;
-                }
-
                 (
                     CantSign {
                         chain_id: id1,
@@ -211,7 +205,6 @@ impl StatusTracker {
 
         #[allow(clippy::match_like_matches_macro)]
         status_props.retain(|s| match s {
-            StatusProperty::InvalidChainId { chain_id } if *chain_id == ok_chain_id => false,
             StatusProperty::CantSign { chain_id, .. } if *chain_id == ok_chain_id => false,
             StatusProperty::NoGas { chain_id, .. } if *chain_id == ok_chain_id => false,
             StatusProperty::NoToken { chain_id, .. } if *chain_id == ok_chain_id => false,
@@ -236,14 +229,6 @@ impl StatusTracker {
             while let Some(ev) = status_rx.recv().await {
                 let mut pass_raw_message = true;
                 let emit_changed = match &ev.content {
-                    DriverEventContent::TransactionFailed(
-                        TransactionFailedReason::InvalidChainId(chain_id),
-                    ) => Self::update(
-                        status.lock().await.deref_mut(),
-                        StatusProperty::InvalidChainId {
-                            chain_id: *chain_id,
-                        },
-                    ),
                     DriverEventContent::CantSign(details) => Self::update(
                         status.lock().await.deref_mut(),
                         StatusProperty::CantSign {
@@ -407,6 +392,7 @@ impl PaymentRuntime {
     fn start_service_loop(
         &self,
         signer_address: Address,
+        chain_id: i64,
         notify: Arc<Notify>,
         extra_testing: Option<ExtraOptionsForTesting>,
         options: AdditionalOptions,
@@ -461,6 +447,7 @@ impl PaymentRuntime {
             } else {
                 service_loop(
                     shared_state_clone,
+                    chain_id,
                     signer_address,
                     notify,
                     &conn,
@@ -568,31 +555,45 @@ impl PaymentRuntime {
     }
 
     fn get_and_remove_tasks(&self) -> Vec<JoinHandle<()>> {
-        self.shared_state
-            .lock()
-            .unwrap()
-            .accounts
-            .iter_mut()
-            .filter_map(|a| a.jh.lock().unwrap().take())
-            .collect()
+        let mut task_handles = Vec::new();
+        let mut lock_shared_state = self.shared_state.lock().unwrap();
+
+        //this shouldn't end in deadlock. It just extracts all handles and removes them from the lists
+        for account in lock_shared_state.accounts.iter_mut() {
+            for jh in account.jh.lock().unwrap().iter_mut() {
+                if let Some(jh) = jh.take() {
+                    task_handles.push(jh);
+                }
+            }
+        }
+
+        task_handles
     }
 
     pub fn is_any_task_running(&self) -> bool {
-        self.shared_state.lock().unwrap().accounts.iter().any(|a| {
-            a.jh.lock()
-                .unwrap()
-                .as_ref()
-                .is_some_and(|jh| !jh.is_finished())
-        })
+        let lock_shared_state = self.shared_state.lock().unwrap();
+
+        for account in lock_shared_state.accounts.iter() {
+            for jh in account.jh.lock().unwrap().iter().flatten() {
+                if !jh.is_finished() {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub fn is_any_task_finished(&self) -> bool {
-        self.shared_state.lock().unwrap().accounts.iter().any(|a| {
-            a.jh.lock()
-                .unwrap()
-                .as_ref()
-                .is_some_and(|jh| jh.is_finished())
-        })
+        let lock_shared_state = self.shared_state.lock().unwrap();
+
+        for account in lock_shared_state.accounts.iter() {
+            for jh in account.jh.lock().unwrap().iter().flatten() {
+                if jh.is_finished() {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     pub async fn join_tasks(&self) -> Result<(), JoinError> {
@@ -622,7 +623,7 @@ impl PaymentRuntime {
         extra_testing: Option<ExtraOptionsForTesting>,
         options: AdditionalOptions,
     ) -> bool {
-        log::info!("Adding account: {}", payment_account);
+        log::debug!("Adding account: {}", payment_account);
         let mut sh = self.shared_state.lock().unwrap();
 
         if sh
@@ -633,13 +634,21 @@ impl PaymentRuntime {
             log::error!("Account already added: {}", payment_account);
             return false;
         }
-        let jh = self.start_service_loop(
-            payment_account.address,
-            self.wake.clone(),
-            extra_testing,
-            options,
-        );
-        *payment_account.jh.lock().unwrap() = Some(jh);
+        for chain_id in self.chains() {
+            log::debug!(
+                "Starting service loop for account: {} and chain id: {}",
+                payment_account.address,
+                chain_id
+            );
+            let jh = self.start_service_loop(
+                payment_account.address,
+                chain_id,
+                self.wake.clone(),
+                extra_testing.clone(),
+                options.clone(),
+            );
+            payment_account.jh.lock().as_mut().unwrap().push(Some(jh));
+        }
         sh.accounts.push(payment_account);
 
         true
@@ -1178,9 +1187,16 @@ pub async fn mint_golem_token(
     let mut db_transaction = conn.begin().await.map_err(err_from!())?;
     let filter = "method=\"FAUCET.create\" AND fee_paid is NULL";
 
-    let tx_existing = get_transactions(&mut *db_transaction, Some(from), Some(filter), None, None)
-        .await
-        .map_err(err_from!())?;
+    let tx_existing = get_transactions(
+        &mut *db_transaction,
+        Some(from),
+        Some(filter),
+        None,
+        None,
+        Some(chain_id as i64),
+    )
+    .await
+    .map_err(err_from!())?;
 
     if let Some(tx) = tx_existing.first() {
         return Err(err_custom_create!(
@@ -1440,7 +1456,27 @@ pub async fn make_deposit(
         };
     }
 
-    let make_deposit_tx = create_make_deposit(
+    let mut db_transaction = conn.begin().await.map_err(err_from!())?;
+    let filter = "method=\"LOCK.deposit\" AND fee_paid is NULL";
+    let tx_existing = get_transactions(
+        &mut *db_transaction,
+        Some(from),
+        Some(filter),
+        None,
+        None,
+        Some(chain_id as i64),
+    )
+    .await
+    .map_err(err_from!())?;
+
+    if let Some(tx) = tx_existing.first() {
+        return Err(err_custom_create!(
+            "You already have a pending deposit transaction with id: {}",
+            tx.id
+        ));
+    }
+
+    let deposit_tx = create_create_deposit(
         from,
         opt.lock_contract_address,
         chain_id,
@@ -1455,13 +1491,12 @@ pub async fn make_deposit(
         },
     )?;
 
-    let mut db_transaction = conn.begin().await.map_err(err_from!())?;
-    let make_deposit_tx = insert_tx(&mut *db_transaction, &make_deposit_tx)
+    let deposit_tx = insert_tx(&mut *db_transaction, &deposit_tx)
         .await
         .map_err(err_from!())?;
     db_transaction.commit().await.map_err(err_from!())?;
 
-    log::info!("Make deposit added to queue: {}", make_deposit_tx.id);
+    log::info!("Create deposit added to queue: {}", deposit_tx.id);
     Ok(())
 }
 

@@ -80,7 +80,7 @@ pub async fn transaction_from_chain_and_into_db(
         .map_err(|_err| ConversionError::from("Cannot parse tx_hash".to_string()))
         .map_err(err_from!())?;
 
-    if let Some(chain_tx) = get_chain_tx_hash(conn, tx_hash.to_string())
+    if let Some(chain_tx) = get_chain_tx_hash(conn, format!("{:#x}", tx_hash))
         .await
         .map_err(err_from!())?
     {

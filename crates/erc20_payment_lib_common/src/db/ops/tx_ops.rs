@@ -13,12 +13,33 @@ pub const TRANSACTION_ORDER_BY_ID_AND_REPLACEMENT_ID: &str = "orig_tx_id DESC,id
 pub const TRANSACTION_ORDER_BY_CREATE_DATE: &str = "created_date ASC";
 pub const TRANSACTION_ORDER_BY_FIRST_PROCESSED_DATE_DESC: &str = "first_processed DESC";
 
+pub async fn get_next_transaction<'c, E>(
+    executor: E,
+    chain_id: i64,
+    account: &str,
+) -> Result<Option<TxDbObj>, sqlx::Error>
+where
+    E: Executor<'c, Database = Sqlite>,
+{
+    let res = sqlx::query_as::<_, TxDbObj>(
+        r"SELECT * FROM tx
+        WHERE chain_id = $1 AND from_addr = $2 AND processing > 0 AND first_processed IS NULL
+        ORDER BY id ASC LIMIT 1",
+    )
+    .bind(chain_id)
+    .bind(account)
+    .fetch_optional(executor)
+    .await?;
+    Ok(res)
+}
+
 pub async fn get_transactions<'c, E>(
     executor: E,
     account: Option<Address>,
     filter: Option<&str>,
     limit: Option<i64>,
     order: Option<&str>,
+    chain_id: Option<i64>,
 ) -> Result<Vec<TxDbObj>, sqlx::Error>
 where
     E: Executor<'c, Database = Sqlite>,
@@ -30,8 +51,12 @@ where
         Some(addr) => format!("from_addr = '{:#x}'", addr),
         None => "1 = 1".to_string(),
     };
+    let filter_chain = match chain_id {
+        Some(chain_id) => format!("chain_id = {}", chain_id),
+        None => "1 = 1".to_string(),
+    };
     let rows = sqlx::query_as::<_, TxDbObj>(
-        format!(r"SELECT * FROM tx WHERE ({filter_account}) AND ({filter}) ORDER BY {order} LIMIT {limit}").as_str(),
+        format!(r"SELECT * FROM tx WHERE ({filter_chain}) AND ({filter_account}) AND ({filter}) ORDER BY {order} LIMIT {limit}").as_str(),
     )
     .fetch_all(executor)
     .await?;
@@ -145,6 +170,7 @@ pub async fn get_next_transactions_to_process(
     conn: &SqlitePool,
     account: Option<Address>,
     limit: i64,
+    chain_id: i64,
 ) -> Result<Vec<TxDbObj>, sqlx::Error> {
     get_transactions(
         conn,
@@ -152,6 +178,7 @@ pub async fn get_next_transactions_to_process(
         Some(TRANSACTION_FILTER_TO_PROCESS),
         Some(limit),
         Some(TRANSACTION_ORDER_BY_ID_AND_REPLACEMENT_ID),
+        Some(chain_id),
     )
     .await
 }

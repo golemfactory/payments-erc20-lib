@@ -14,7 +14,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 use web3::types::Address;
 
-#[allow(clippy::too_many_arguments)]
 async fn scan_int(
     conn: SqlitePool,
     scan_blockchain_options: &ScanBlockchainOptions,
@@ -76,7 +75,7 @@ async fn scan_auto_step(
     web3: Arc<Web3RpcPool>,
     sender: Option<Address>,
     scan_info: &mut ScanDaoDbObj,
-) -> Result<(), PaymentError> {
+) -> Result<bool, PaymentError> {
     let current_block = web3
         .clone()
         .eth_block_number()
@@ -84,48 +83,56 @@ async fn scan_auto_step(
         .map_err(err_from!())?
         .as_u64() as i64;
 
-    let (start_block, end_block, is_forward) = if scan_info.start_block == -1 {
-        let start_block = std::cmp::max(
-            current_block - scan_blockchain_options.blocks_behind.unwrap_or(100) as i64,
-            1,
-        );
-        let end_block = current_block;
-        (start_block, end_block, true)
-    } else if current_block - scan_info.last_block
-        >= scan_blockchain_options.blocks_behind.unwrap_or(100) as i64
-            + scan_blockchain_options.forward_scan_buffer as i64
-    {
-        log::info!("Scan forward needed");
-        let start_block = scan_info.last_block + 1;
+    let scan_behind_needed =
+        scan_info.start_block < scan_blockchain_options.from_block.unwrap_or(1) as i64;
+
+    let (start_block, end_block, is_forward) = if scan_behind_needed {
+        if current_block - scan_info.last_block
+            >= scan_blockchain_options.blocks_behind.unwrap_or(100) as i64
+                + scan_blockchain_options.forward_scan_buffer as i64
+        {
+            log::info!("Scan forward needed");
+            let start_block = scan_info.last_block + 1;
+            if start_block > current_block {
+                log::warn!(
+                    "Start block {} is higher than current block {}, no newer data on blockchain",
+                    start_block,
+                    current_block
+                );
+                return Ok(true);
+            }
+            let end_block = start_block + scan_blockchain_options.blocks_at_once as i64;
+            let end_block = std::cmp::min(end_block, current_block);
+            (start_block, end_block, true)
+        } else {
+            let end_block = scan_info.start_block;
+            let start_block =
+                std::cmp::max(end_block - scan_blockchain_options.blocks_at_once as i64, 1);
+            if end_block - start_block > 0 {
+                (start_block, end_block, false)
+            } else {
+                log::warn!(
+                    "Start block {} is higher than end block {}, no newer data on blockchain",
+                    start_block,
+                    end_block
+                );
+                return Ok(true);
+            }
+        }
+    } else {
+        // normal auto scan
+        let start_block = scan_info.last_block - 100;
         if start_block > current_block {
             log::warn!(
                 "Start block {} is higher than current block {}, no newer data on blockchain",
                 start_block,
                 current_block
             );
-            return Ok(());
+            return Ok(true);
         }
         let end_block = start_block + scan_blockchain_options.blocks_at_once as i64;
-        let end_block = std::cmp::min(end_block, current_block);
+        let end_block = std::cmp::min(end_block, current_block + 1);
         (start_block, end_block, true)
-    } else {
-        if scan_info.start_block <= scan_blockchain_options.from_block.unwrap_or(1) as i64 {
-            return Ok(());
-        }
-
-        let end_block = scan_info.start_block;
-        let start_block =
-            std::cmp::max(end_block - scan_blockchain_options.blocks_at_once as i64, 1);
-        if end_block - start_block > 0 {
-            (start_block, end_block, false)
-        } else {
-            log::warn!(
-                "Start block {} is higher than end block {}, no newer data on blockchain",
-                start_block,
-                end_block
-            );
-            return Ok(());
-        }
     };
 
     log::info!(
@@ -174,7 +181,7 @@ async fn scan_auto_step(
         .await
         .map_err(err_from!())?;
 
-    Ok(())
+    Ok(is_forward)
 }
 
 pub async fn scan_blockchain_local(
@@ -264,14 +271,20 @@ pub async fn scan_blockchain_local(
             )
             .await
             {
-                Ok(_) => {
+                Ok(wait) => {
                     log::info!("Scan step done");
+                    if wait {
+                        tokio::time::sleep(std::time::Duration::from_secs(
+                            scan_blockchain_options.scan_interval,
+                        ))
+                        .await;
+                    }
                 }
                 Err(e) => {
                     log::info!("Scan step failed - trying again: {}", e);
+                    tokio::time::sleep(std::time::Duration::from_millis(2000)).await;
                 }
             }
-            // tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
         }
     } else {
         if current_block < scan_info.last_block {
@@ -321,12 +334,6 @@ pub async fn scan_blockchain_local(
             }
         }
 
-        /*let current_end_block = std::cmp::min(
-            end_block,
-            start_block + scan_blockchain_options.blocks_at_once as i64,
-        );*/
-
-        //let mut scan_info = scan_info.clone();
         scan_int(
             conn.clone(),
             &scan_blockchain_options,

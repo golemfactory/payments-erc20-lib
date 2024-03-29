@@ -1,4 +1,5 @@
 use super::model::ChainTxDbObj;
+use chrono::{DateTime, Utc};
 use sqlx::Executor;
 use sqlx::Sqlite;
 use sqlx::SqlitePool;
@@ -51,6 +52,26 @@ pub async fn get_chain_txs_by_chain_id(
         r"SELECT * FROM chain_tx WHERE chain_id = $1 ORDER by id DESC LIMIT $2",
     )
     .bind(chain_id)
+    .bind(limit)
+    .fetch_all(conn)
+    .await?;
+    Ok(rows)
+}
+
+pub async fn get_chain_txs_by_chain_id_and_dates(
+    conn: &SqlitePool,
+    chain_id: i64,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+    limit: Option<i64>,
+) -> Result<Vec<ChainTxDbObj>, sqlx::Error> {
+    let limit = limit.unwrap_or(i64::MAX);
+    let rows = sqlx::query_as::<_, ChainTxDbObj>(
+        r"SELECT * FROM chain_tx WHERE chain_id = $1 AND blockchain_date >= $2 AND blockchain_date <= $3 ORDER by id DESC LIMIT $4",
+    )
+    .bind(chain_id)
+    .bind(from)
+    .bind(to)
     .bind(limit)
     .fetch_all(conn)
     .await?;

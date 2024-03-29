@@ -367,7 +367,7 @@ pub fn create_faucet_mint(
     })
 }
 
-pub fn create_make_deposit(
+pub fn create_create_deposit(
     from: Address,
     lock_address: Address,
     chain_id: u64,
@@ -962,6 +962,13 @@ pub async fn find_receipt_extended(
     chain_tx_dao.max_fee_per_gas = tx.max_fee_per_gas.map(|x| x.to_string());
     chain_tx_dao.priority_fee = tx.max_priority_fee_per_gas.map(|x| x.to_string());
     chain_tx_dao.fee_paid = (gas_used * effective_gas_price).to_string();
+
+    chain_tx_dao.method = if tx.input.0.len() >= 4 {
+        // extract method
+        format!("0x{}", hex::encode(&tx.input.0[0..4]))
+    } else {
+        "N/A".to_string()
+    };
 
     //todo: move to lazy static
     let erc20_transfer_event_signature: H256 =

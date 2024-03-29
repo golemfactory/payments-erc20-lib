@@ -8,9 +8,6 @@ use web3::types::Address;
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum StatusProperty {
-    InvalidChainId {
-        chain_id: i64,
-    },
     CantSign {
         chain_id: i64,
         address: String,
@@ -87,7 +84,6 @@ pub enum TransactionStuckReason {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum TransactionFailedReason {
-    InvalidChainId(i64),
     Unknown,
 }
 

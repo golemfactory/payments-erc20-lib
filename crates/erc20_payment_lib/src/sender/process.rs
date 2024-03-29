@@ -9,7 +9,7 @@ use erc20_payment_lib_common::ops::{
 };
 use erc20_payment_lib_common::{
     CantSignContent, DriverEvent, DriverEventContent, GasLowInfo, NoGasDetails,
-    TransactionFailedReason, TransactionStuckReason,
+    TransactionStuckReason,
 };
 use rust_decimal::prelude::Zero;
 use rust_decimal::Decimal;
@@ -62,13 +62,6 @@ pub async fn process_transaction(
 ) -> Result<(TxDbObj, ProcessTransactionResult), PaymentError> {
     let chain_id = web3_tx_dao.chain_id;
     let Some(chain_setup) = payment_setup.chain_setup.get(&chain_id) else {
-        send_driver_event(
-            &event_sender,
-            DriverEventContent::TransactionFailed(TransactionFailedReason::InvalidChainId(
-                chain_id,
-            )),
-        )
-        .await;
         return Ok((web3_tx_dao.clone(), ProcessTransactionResult::DoNotSave));
     };
 

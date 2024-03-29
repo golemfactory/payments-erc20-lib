@@ -278,6 +278,13 @@ pub struct ScanBlockchainOptions {
     )]
     pub blocks_at_once: u64,
 
+    #[structopt(
+        long = "scan-interval",
+        default_value = "2",
+        help = "How often check for newest blocks"
+    )]
+    pub scan_interval: u64,
+
     #[structopt(long = "import-balances")]
     pub import_balances: bool,
 
@@ -380,6 +387,9 @@ pub struct CleanupOptions {
     This operation is unsafe and may lead to double spending"
     )]
     pub remove_tx_unsafe: bool,
+
+    #[structopt(long = "chain-id", help = "Chain id to use")]
+    pub chain_id: Option<i64>,
 }
 
 #[derive(StructOpt)]

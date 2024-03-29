@@ -255,6 +255,7 @@ pub async fn update_tx_result(
 
 pub async fn process_transactions(
     signer_account: &SignerAccount,
+    chain_id: i64,
     event_sender: Option<tokio::sync::mpsc::Sender<DriverEvent>>,
     shared_state: Arc<std::sync::Mutex<SharedState>>,
     conn: &SqlitePool,
@@ -266,7 +267,7 @@ pub async fn process_transactions(
     let mut current_wait_time_no_gas_token: f64 = 0.0;
     loop {
         let mut transactions =
-            get_next_transactions_to_process(conn, Some(signer_account.address), 1)
+            get_next_transactions_to_process(conn, Some(signer_account.address), 1, chain_id)
                 .await
                 .map_err(err_from!())?;
 
@@ -469,6 +470,7 @@ async fn sleep_for_gather_time_or_report_alive(
 
 pub async fn service_loop(
     shared_state: Arc<std::sync::Mutex<SharedState>>,
+    chain_id: i64,
     account: Address,
     wake: Arc<tokio::sync::Notify>,
     conn: &SqlitePool,
@@ -491,17 +493,21 @@ pub async fn service_loop(
     let metric_label_gather_post = "erc20_payment_lib.service_loop.gather_post";
     let metric_label_gather_post_error = "erc20_payment_lib.service_loop.gather_post_error";
     //let metric_label_loop_duration = "erc20_payment_lib.service_loop.loop_duration";
-    metrics::counter!(metric_label_start, 0);
-    metrics::counter!(metric_label_process_allowance, 0);
-    metrics::counter!(metric_label_gather_pre, 0);
-    metrics::counter!(metric_label_gather_pre_error, 0);
-    metrics::counter!(metric_label_gather_post, 0);
-    metrics::counter!(metric_label_gather_post_error, 0);
+    metrics::counter!(metric_label_start, 0, "chain_id" => chain_id.to_string());
+    metrics::counter!(metric_label_process_allowance, 0, "chain_id" => chain_id.to_string());
+    metrics::counter!(metric_label_gather_pre, 0, "chain_id" => chain_id.to_string());
+    metrics::counter!(metric_label_gather_pre_error, 0, "chain_id" => chain_id.to_string());
+    metrics::counter!(metric_label_gather_post, 0, "chain_id" => chain_id.to_string());
+    metrics::counter!(metric_label_gather_post_error, 0, "chain_id" => chain_id.to_string());
 
     let mut process_tx_needed;
     let mut last_stats_time: Option<Instant> = None;
     loop {
-        log::debug!("Sender service loop - start loop");
+        log::debug!(
+            "Sender service loop - start loop chain id: {} - account: {:#x}",
+            chain_id,
+            account
+        );
         metrics::counter!(metric_label_start, 1);
         let signer_account = match shared_state
             .lock()
@@ -529,6 +535,7 @@ pub async fn service_loop(
             log::warn!("Skipping processing transactions...");
         } else if let Err(e) = process_transactions(
             &signer_account,
+            chain_id,
             event_sender.clone(),
             shared_state.clone(),
             conn,
@@ -580,6 +587,7 @@ pub async fn service_loop(
 
         let mut token_transfer_map = match gather_transactions_pre(
             &signer_account,
+            chain_id,
             conn,
             payment_setup,
             &mut process_tx_needed,

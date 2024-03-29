@@ -7,7 +7,7 @@ mod transfer_in_dao;
 mod tx_dao;
 
 pub use allowance_dao::AllowanceDbObj;
-pub use chain_transfer_dao::ChainTransferDbObj;
+pub use chain_transfer_dao::{ChainTransferDbObj, ChainTransferDbObjExt};
 pub use chain_tx_dao::ChainTxDbObj;
 pub use scan_dao::ScanDaoDbObj;
 pub use token_transfer_dao::TokenTransferDbObj;

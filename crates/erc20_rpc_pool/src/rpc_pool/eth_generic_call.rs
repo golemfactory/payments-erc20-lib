@@ -25,7 +25,12 @@ impl Web3RpcPool {
         let mut loop_no = 0;
         const LOOP_COUNT: usize = 4;
         loop {
-            let idx_vec = self.clone().choose_best_endpoints().await;
+            let resp = self.clone().choose_best_endpoints().await;
+            if resp.allowed_endpoints.is_empty() && !resp.is_resolving {
+                log::warn!("No valid endpoints found for chain id {}, wait until next check. Call yagna payment driver rpc --verify for details", self.chain_id);
+                return Err(web3::Error::Unreachable);
+            }
+            let idx_vec = resp.allowed_endpoints;
             if let Some(idx_chosen) = idx_vec.first() {
                 self.mark_rpc_chosen(*idx_chosen);
             }
