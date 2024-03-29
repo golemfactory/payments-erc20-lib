@@ -1,5 +1,8 @@
 use crate::signer::{Signer, SignerAccount};
-use crate::transaction::{create_create_deposit, create_distribute_transaction, create_faucet_mint, create_terminate_deposit, create_token_transfer, find_receipt_extended, FindReceiptParseResult};
+use crate::transaction::{
+    create_create_deposit, create_distribute_transaction, create_faucet_mint,
+    create_terminate_deposit, create_token_transfer, find_receipt_extended, FindReceiptParseResult,
+};
 use crate::{err_custom_create, err_from};
 use erc20_payment_lib_common::create_sqlite_connection;
 use erc20_payment_lib_common::ops::{
