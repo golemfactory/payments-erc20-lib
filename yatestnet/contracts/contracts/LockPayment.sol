@@ -17,22 +17,22 @@ interface IERC20 {
   * - Funder - the address that deposits the funds
   */
 
-struct Deposit {
-    address spender; //address that can spend the funds provided by customer
-    uint128 amount; //remaining funds locked
-    uint128 feeAmount; //fee amount locked for spender
-    uint64 validTo; //after this timestamp funds can be returned to customer
-}
+    struct Deposit {
+        address spender; //address that can spend the funds provided by customer
+        uint128 amount; //remaining funds locked
+        uint128 feeAmount; //fee amount locked for spender
+        uint64 validTo; //after this timestamp funds can be returned to customer
+    }
 
-struct DepositView {
-    uint256 id;     //unique id
-    uint64 nonce;  //nonce unique for each funder
-    address funder; //address that can spend the funds provided by customer
-    address spender; //address that can spend the funds provided by customer
-    uint128 amount; //remaining funds locked
-    uint128 feeAmount; //fee amount locked for spender
-    uint64 validTo; //after this timestamp funds can be returned to customer
-}
+    struct DepositView {
+        uint256 id;     //unique id
+        uint64 nonce;  //nonce unique for each funder
+        address funder; //address that can spend the funds provided by customer
+        address spender; //address that can spend the funds provided by customer
+        uint128 amount; //remaining funds locked
+        uint128 feeAmount; //fee amount locked for spender
+        uint64 validTo; //after this timestamp funds can be returned to customer
+    }
 
 /**
  * @dev This contract is part of GLM payment system. Visit https://golem.network for details.
@@ -40,6 +40,11 @@ struct DepositView {
  */
 contract LockPayment {
     IERC20 public GLM;
+
+    event DepositCreated(uint256 id, address spender);
+    event DepositExtended(uint256 id, address spender);
+    event DepositClosed(uint256 id, address spender);
+    event DepositTerminated(uint256 id, address spender);
 
     // deposit is stored using arbitrary id
     mapping(uint256 => Deposit) public deposits;
@@ -102,8 +107,9 @@ contract LockPayment {
         require(percentFee == 0, "percentFee == 0 for this contract");
         require(spender != address(0), "spender cannot be null address");
         require(msg.sender != spender, "spender cannot be funder");
-        require(GLM.transferFrom(msg.sender, address(this), amount + constFeeAmount), "transferFrom failed");
-        deposits[id] = Deposit(spender, amount, constFeeAmount, validToTimestamp);
+        require(GLM.transferFrom(msg.sender, address(this), amount + flatFeeAmount), "transferFrom failed");
+        deposits[id] = Deposit(spender, amount, flatFeeAmount, validToTimestamp);
+        emit DepositCreated(id, spender);
         return id;
     }
 
@@ -116,6 +122,7 @@ contract LockPayment {
         deposit.feeAmount += additionalFlatFee;
         deposit.validTo = validToTimestamp;
         deposits[id] = deposit;
+        emit DepositExtended(id, deposit.spender);
     }
 
     // Spender can close deposit anytime claiming fee and returning rest of funds to Funder
@@ -131,6 +138,7 @@ contract LockPayment {
         }
         deposits[id].amount = 0;
         deposits[id].feeAmount = 0;
+        emit DepositClosed(id, deposit.spender);
     }
 
     // Funder can terminate deposit after validTo date elapses
@@ -144,6 +152,7 @@ contract LockPayment {
         require(GLM.transfer(msg.sender, deposit.amount + deposit.feeAmount), "transfer failed");
         deposits[id].amount = 0;
         deposits[id].feeAmount = 0;
+        emit DepositTerminated(id, deposit.spender);
     }
 
     function depositSingleTransfer(uint256 id, address addr, uint128 amount) public {
