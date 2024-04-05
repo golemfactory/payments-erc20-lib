@@ -17,22 +17,22 @@ interface IERC20 {
   * - Funder - the address that deposits the funds
   */
 
-    struct Deposit {
-        address spender; //address that can spend the funds provided by customer
-        uint128 amount; //remaining funds locked
-        uint128 feeAmount; //fee amount locked for spender
-        uint64 validTo; //after this timestamp funds can be returned to customer
-    }
+struct Deposit {
+    address spender; //address that can spend the funds provided by customer
+    uint128 amount; //remaining funds locked
+    uint128 feeAmount; //fee amount locked for spender
+    uint64 validTo; //after this timestamp funds can be returned to customer
+}
 
-    struct DepositView {
-        uint256 id;     //unique id
-        uint64 nonce;  //nonce unique for each funder
-        address funder; //address that can spend the funds provided by customer
-        address spender; //address that can spend the funds provided by customer
-        uint128 amount; //remaining funds locked
-        uint128 feeAmount; //fee amount locked for spender
-        uint64 validTo; //after this timestamp funds can be returned to customer
-    }
+struct DepositView {
+    uint256 id;     //unique id
+    uint64 nonce;  //nonce unique for each funder
+    address funder; //address that can spend the funds provided by customer
+    address spender; //address that can spend the funds provided by customer
+    uint128 amount; //remaining funds locked
+    uint128 feeAmount; //fee amount locked for spender
+    uint64 validTo; //after this timestamp funds can be returned to customer
+}
 
 /**
  * @dev This contract is part of GLM payment system. Visit https://golem.network for details.
@@ -87,14 +87,14 @@ contract LockPayment {
     // id - unique id (build from Funder address and nonce)
     // spender - the address that is allowed to spend the funds regardless of time
     // amount - amount of GLM tokens to lock
-    // constFeeAmount - amount of GLM tokens given to spender (non-refundable). Fee is claimed by spender when called payoutSingle or payoutMultiple first time.
+    // flatFeeAmount - amount of GLM tokens given to spender (non-refundable). Fee is claimed by spender when called payoutSingle or payoutMultiple first time.
     // percentFee - percent fee as percent of amount (given in parts/per million), so 1000 gives 0.1 %.
-    //              if given negative it is deducted from constFeeAmount
+    //              if given negative it is deducted from flatFeeAmount
     //              IT IS NOT IMPLEMENTED IN THIS IMPLEMENTATION
     // blockNo - block number until which funds are guaranteed to be locked for spender.
     //           Spender still can use the funds after this block,
     //           but customer can request the funds to be returned clearing deposit after (or equal to) this block number.
-    function createDeposit(uint64 nonce, address spender, uint128 amount, uint128 constFeeAmount, int64 percentFee, uint64 validToTimestamp) public returns (uint256) {
+    function createDeposit(uint64 nonce, address spender, uint128 amount, uint128 flatFeeAmount, int64 percentFee, uint64 validToTimestamp) public returns (uint256) {
         //check if id is not used
         uint256 id = idFromNonce(nonce);
         require(deposits[id].amount == 0, "deposits[id].amount == 0");
@@ -107,13 +107,13 @@ contract LockPayment {
         return id;
     }
 
-    function extendDeposit(uint64 nonce, uint128 extraAmount, uint128 extraFee, uint64 validToTimestamp) public {
+    function extendDeposit(uint64 nonce, uint128 additionalAmount, uint128 additionalFlatFee, uint64 validToTimestamp) public {
         uint256 id = idFromNonce(nonce);
         Deposit memory deposit = deposits[id];
-        require(GLM.transferFrom(msg.sender, address(this), extraAmount + extraFee), "transferFrom failed");
+        require(GLM.transferFrom(msg.sender, address(this), additionalAmount + additionalFlatFee), "transferFrom failed");
         require(deposit.validTo <= validToTimestamp, "deposit.validTo <= validTo");
-        deposit.amount += extraAmount;
-        deposit.feeAmount += extraFee;
+        deposit.amount += additionalAmount;
+        deposit.feeAmount += additionalFlatFee;
         deposit.validTo = validToTimestamp;
         deposits[id] = deposit;
     }
