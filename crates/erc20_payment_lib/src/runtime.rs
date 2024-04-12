@@ -1050,7 +1050,6 @@ impl PaymentRuntime {
         from: Address,
         deposit_contract: Address,
         deposit_id: U256,
-        token_contract: Address,
     ) -> Result<(), PaymentError> {
         let chain_cfg = self.config.chain.get(chain_name).ok_or(err_custom_create!(
             "Chain {} not found in config file",
@@ -1067,7 +1066,7 @@ impl PaymentRuntime {
                 lock_contract_address: deposit_contract,
                 skip_deposit_check: true,
                 deposit_id,
-                token_address: token_contract,
+                token_address: chain_cfg.token.address,
             },
         )
         .await?;
