@@ -1044,6 +1044,37 @@ impl PaymentRuntime {
         .await
     }
 
+    pub async fn close_deposit(
+        &self,
+        chain_name: &str,
+        from: Address,
+        deposit_contract: Address,
+        deposit_id: U256,
+        token_contract: Address,
+    ) -> Result<(), PaymentError> {
+        let chain_cfg = self.config.chain.get(chain_name).ok_or(err_custom_create!(
+            "Chain {} not found in config file",
+            chain_name
+        ))?;
+
+        let web3 = self.setup.get_provider(chain_cfg.chain_id)?;
+        close_deposit(
+            web3,
+            &self.conn,
+            chain_cfg.chain_id as u64,
+            from,
+            CloseDepositOptionsInt {
+                lock_contract_address: deposit_contract,
+                skip_deposit_check: true,
+                deposit_id,
+                token_address: token_contract,
+            },
+        )
+        .await?;
+
+        Ok(())
+    }
+
     pub fn chains(&self) -> Vec<i64> {
         self.setup.chain_setup.keys().copied().collect()
     }
