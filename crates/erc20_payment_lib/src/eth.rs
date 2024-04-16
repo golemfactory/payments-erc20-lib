@@ -137,6 +137,15 @@ pub async fn get_deposit_details(
     let amount_u256 = U256::from(deposit_view.amount);
     let fee_amount_u256 = U256::from(deposit_view.fee_amount);
 
+    let valid_to = chrono::DateTime::from_timestamp(
+        deposit_view
+            .valid_to
+            .try_into()
+            .map_err(|e| err_custom_create!("Cast error: {e}"))?,
+        0,
+    )
+    .ok_or_else(|| err_custom_create!("Deposit timestamp out of range"))?;
+
     Ok(DepositDetails {
         deposit_id: format!("{:#x}", deposit_view.id),
         deposit_nonce: deposit_view.nonce,
@@ -148,7 +157,7 @@ pub async fn get_deposit_details(
         amount_decimal: amount_u256.to_eth().map_err(err_from!())?,
         fee_amount_decimal: fee_amount_u256.to_eth().map_err(err_from!())?,
         current_block_datetime: None,
-        valid_to: Default::default(),
+        valid_to,
     })
 }
 
