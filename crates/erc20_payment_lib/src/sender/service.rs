@@ -335,6 +335,16 @@ pub async fn process_transactions(
             log::debug!("Updating token transfer result");
             update_token_transfer_result(event_sender.clone(), conn, &mut tx, &process_t_res)
                 .await?;
+        } else if tx.method == "LOCK.depositSingleTransfer" || tx.method == "LOCK.depositTransfer" {
+            log::debug!("Updating token transfer result");
+            update_token_transfer_result(event_sender.clone(), conn, &mut tx, &process_t_res)
+                .await?;
+        } else if tx.method == "LOCK.depositSingleTransferAndClose"
+            || tx.method == "LOCK.depositTransferAndClose"
+        {
+            log::debug!("Updating token transfer result");
+            update_token_transfer_result(event_sender.clone(), conn, &mut tx, &process_t_res)
+                .await?;
         } else if tx.method == "ERC20.approve" {
             log::debug!("Updating token approve result");
             update_approve_result(event_sender.clone(), conn, &mut tx, &process_t_res).await?;
