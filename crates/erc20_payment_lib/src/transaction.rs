@@ -990,11 +990,6 @@ pub async fn find_receipt_extended(
         });
     }
 
-    let mut transfered_to_contract_amount = U256::zero();
-    let mut transfered_to_contract_token = None;
-    let mut transfered_to_contract_from = None;
-
-    //check if there is special transfer to contract
     for log in &receipt.logs {
         if log.address != glm_address {
             continue;
@@ -1003,77 +998,18 @@ pub async fn find_receipt_extended(
             let from = Address::from_slice(&log.topics[1][12..]);
             let to = Address::from_slice(&log.topics[2][12..]);
             let amount = U256::from(log.data.0.as_slice());
-            println!(
-                "ERC20 transfer from {:#x} to {:#x} amount {:#x}",
-                from, to, amount
-            );
 
-            if to == tx_to {
-                if let Some(tcf) = &transfered_to_contract_from {
-                    if from != *tcf {
-                        return Err(err_custom_create!(
-                            "Transfer to contract from different addresses {:#x} != {:#x}",
-                            from,
-                            tcf
-                        ));
-                    }
-                }
-                if let Some(tct) = &transfered_to_contract_token {
-                    if log.address != *tct {
-                        return Err(err_custom_create!(
-                            "Transfer to contract from different tokens {:#x} != {:#x}",
-                            log.address,
-                            tct
-                        ));
-                    }
-                }
-                transfered_to_contract_from = Some(from);
-                transfered_to_contract_token = Some(log.address);
-                transfered_to_contract_amount += amount;
-            }
-        }
-    }
-
-    for log in &receipt.logs {
-        if log.address != glm_address {
-            continue;
-        }
-        if log.topics.len() == 3 && log.topics[0] == erc20_transfer_event_signature {
-            let from = Address::from_slice(&log.topics[1][12..]);
-            let to = Address::from_slice(&log.topics[2][12..]);
-            let amount = U256::from(log.data.0.as_slice());
-            if to == tx_to {
-                continue;
-            }
-
-            if from == tx_to {
-                transfers.push(ChainTransferDbObj {
-                    id: 0,
-                    from_addr: format!("{from:#x}"),
-                    receiver_addr: format!("{to:#x}"),
-                    chain_id,
-                    token_addr: Some(format!("{:#x}", log.address)),
-                    token_amount: amount.to_string(),
-                    chain_tx_id: 0,
-                    fee_paid: None,
-                    blockchain_date: Some(chain_tx_dao.blockchain_date),
-                });
-            } else if to == tx_to {
-                //ignore payment to contract - handled in loop before
-                continue;
-            } else {
-                transfers.push(ChainTransferDbObj {
-                    id: 0,
-                    from_addr: format!("{from:#x}"),
-                    receiver_addr: format!("{to:#x}"),
-                    chain_id,
-                    token_addr: Some(format!("{:#x}", log.address)),
-                    token_amount: amount.to_string(),
-                    chain_tx_id: 0,
-                    fee_paid: None,
-                    blockchain_date: Some(chain_tx_dao.blockchain_date),
-                });
-            }
+            transfers.push(ChainTransferDbObj {
+                id: 0,
+                from_addr: format!("{from:#x}"),
+                receiver_addr: format!("{to:#x}"),
+                chain_id,
+                token_addr: Some(format!("{:#x}", log.address)),
+                token_amount: amount.to_string(),
+                chain_tx_id: 0,
+                fee_paid: None,
+                blockchain_date: Some(chain_tx_dao.blockchain_date),
+            });
         }
     }
 
