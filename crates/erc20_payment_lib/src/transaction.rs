@@ -1047,24 +1047,9 @@ pub async fn find_receipt_extended(
             }
 
             if from == tx_to {
-                if Some(log.address) != transfered_to_contract_token {
-                    if transfered_to_contract_token.is_none() {
-                        return Ok(FindReceiptParseResult::Failure(
-                            "Transfer from contract without contract from".to_string(),
-                        ));
-                    }
-                    return Err(err_custom_create!(
-                        "Transfer from contract different token {:#x} != {:#x}",
-                        log.address,
-                        transfered_to_contract_token.unwrap()
-                    ));
-                }
-                let contract_from_addr = transfered_to_contract_from.ok_or(err_custom_create!(
-                    "Transfer from contract without contract from"
-                ))?;
                 transfers.push(ChainTransferDbObj {
                     id: 0,
-                    from_addr: format!("{contract_from_addr:#x}"),
+                    from_addr: format!("{from:#x}"),
                     receiver_addr: format!("{to:#x}"),
                     chain_id,
                     token_addr: Some(format!("{:#x}", log.address)),
