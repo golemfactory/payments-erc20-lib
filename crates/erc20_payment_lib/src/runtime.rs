@@ -27,9 +27,7 @@ use sqlx::SqlitePool;
 use crate::account_balance::{test_balance_loop, BalanceOptions2};
 use crate::config::AdditionalOptions;
 use crate::contracts::CreateDepositArgs;
-use crate::eth::{
-    get_eth_addr_from_secret, get_latest_block_info, DepositDetails,
-};
+use crate::eth::{get_eth_addr_from_secret, get_latest_block_info, DepositDetails};
 use crate::sender::service_loop;
 use crate::utils::{DecimalConvExt, StringConvExt, U256ConvExt};
 use chrono::{DateTime, Utc};
