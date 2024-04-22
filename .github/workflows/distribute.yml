@@ -44,7 +44,7 @@ jobs:
         run: |
           set -x 
           erc20_processor show-config > config.toml.tmp
-          sed 's/^max-fee-per-gas = "20"$/max-fee-per-gas = "1.1"/' config.toml.tmp > config-payments.toml
+          sed 's/^max-fee-per-gas = "20"$/max-fee-per-gas = "5.1"/' config.toml.tmp > config-payments.toml
           erc20_processor transfer --account-no 0 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all
           erc20_processor transfer --account-no 1 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all
           erc20_processor transfer --account-no 2 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all
