@@ -10,6 +10,7 @@ use actix_web::http::{header, StatusCode};
 use actix_web::web::Data;
 use actix_web::{web, HttpRequest, HttpResponse, Responder, Scope};
 use chrono::{DateTime, Utc};
+use erc20_payment_lib_common::model::DepositId;
 use erc20_payment_lib_common::ops::*;
 use erc20_payment_lib_common::utils::datetime_from_u256_timestamp;
 use erc20_payment_lib_common::{export_metrics_to_prometheus, FaucetData};
@@ -582,7 +583,7 @@ struct TransactionRequest {
     chain: i64,
     due_date: Option<String>,
     payment_id: Option<String>,
-    deposit_id: Option<String>,
+    deposit_id: Option<DepositId>,
 }
 
 async fn new_transfer(
@@ -632,7 +633,7 @@ async fn new_transfer(
         amount: U256::from_dec_str(&new_transfer.amount).unwrap(),
         payment_id,
         deadline: due_date,
-        deposit_id: new_transfer.deposit_id.clone(),
+        deposit_id: new_transfer.deposit_id,
     };
 
     let account = match data

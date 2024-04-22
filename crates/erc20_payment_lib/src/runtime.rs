@@ -383,7 +383,7 @@ pub struct TransferArgs {
     pub amount: U256,
     pub payment_id: String,
     pub deadline: Option<DateTime<Utc>>,
-    pub deposit_id: Option<String>,
+    pub deposit_id: Option<DepositId>,
 }
 
 impl PaymentRuntime {
