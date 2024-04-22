@@ -48,23 +48,4 @@ impl DepositId {
             "nonce": self.nonce(),
         })
     }
-
-    pub fn from_json(json: serde_json::Value) -> Result<Self, PaymentError> {
-        let deposit_id = json["depositId"]
-            .as_str()
-            .ok_or(err_custom_create!("depositId not found"))?;
-        let deposit_id = U256::from_str_radix(deposit_id, 16)
-            .map_err(|e| err_custom_create!("Invalid depositId: {}", e))?;
-
-        let lock_address = json["lockAddress"]
-            .as_str()
-            .ok_or(err_custom_create!("lockAddress not found"))?;
-        let lock_address = Address::from_str(lock_address)
-            .map_err(|e| err_custom_create!("Invalid lockAddress: {}", e))?;
-
-        Ok(DepositId {
-            deposit_id,
-            lock_address,
-        })
-    }
 }
