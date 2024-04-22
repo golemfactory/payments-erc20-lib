@@ -40,6 +40,10 @@ jobs:
         env:
           ETH_PRIVATE_KEYS: ${{ secrets.HOLESKY_FUND_ENV }}
 
+      - name: Wait for blockchain propagate over all RPC nodes (we are talking with multiple RPC nodes)
+        run: |
+          sleep 30
+
       - name: Transfer all left ETH tokens
         run: |
           set -x 
