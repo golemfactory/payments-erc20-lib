@@ -28,12 +28,12 @@ use crate::account_balance::{test_balance_loop, BalanceOptions2};
 use crate::config::AdditionalOptions;
 use crate::contracts::CreateDepositArgs;
 use crate::eth::{
-    get_eth_addr_from_secret, get_latest_block_info, nonce_from_deposit_id, DepositDetails,
+    get_eth_addr_from_secret, get_latest_block_info, DepositDetails,
 };
 use crate::sender::service_loop;
 use crate::utils::{DecimalConvExt, StringConvExt, U256ConvExt};
 use chrono::{DateTime, Utc};
-use erc20_payment_lib_common::model::TokenTransferDbObj;
+use erc20_payment_lib_common::model::{DepositId, TokenTransferDbObj};
 use erc20_payment_lib_common::{
     DriverEvent, DriverEventContent, FaucetData, SharedInfoTx, StatusProperty,
     TransactionStuckReason, Web3RpcPoolContent,
@@ -679,8 +679,7 @@ impl PaymentRuntime {
     pub async fn deposit_details(
         &self,
         chain_name: String,
-        deposit_id: U256,
-        lock_contract_address: Address,
+        deposit_id: DepositId,
     ) -> Result<DepositDetails, PaymentError> {
         let chain_cfg = self
             .config
@@ -693,7 +692,7 @@ impl PaymentRuntime {
 
         let web3 = self.setup.get_provider(chain_cfg.chain_id)?;
 
-        deposit_details(web3, deposit_id, lock_contract_address).await
+        deposit_details(web3, deposit_id).await
     }
 
     pub async fn get_token_balance(
@@ -1048,8 +1047,7 @@ impl PaymentRuntime {
         &self,
         chain_name: &str,
         from: Address,
-        deposit_contract: Address,
-        deposit_id: U256,
+        deposit_id: DepositId,
     ) -> Result<(), PaymentError> {
         let chain_cfg = self.config.chain.get(chain_name).ok_or(err_custom_create!(
             "Chain {} not found in config file",
@@ -1063,7 +1061,6 @@ impl PaymentRuntime {
             chain_cfg.chain_id as u64,
             from,
             CloseDepositOptionsInt {
-                lock_contract_address: deposit_contract,
                 skip_deposit_check: true,
                 deposit_id,
                 token_address: chain_cfg.token.address,
@@ -1247,15 +1244,14 @@ pub async fn mint_golem_token(
 
 pub async fn deposit_details(
     web3: Arc<Web3RpcPool>,
-    deposit_id: U256,
-    lock_contract_address: Address,
+    deposit_id: DepositId,
 ) -> Result<DepositDetails, PaymentError> {
     let block_info = get_latest_block_info(web3.clone()).await?;
 
     let mut result = crate::eth::get_deposit_details(
         web3.clone(),
-        deposit_id,
-        lock_contract_address,
+        deposit_id.deposit_id,
+        deposit_id.lock_address,
         Some(block_info.block_number),
     )
     .await?;
@@ -1268,16 +1264,14 @@ pub async fn deposit_details(
 }
 
 pub struct CloseDepositOptionsInt {
-    pub lock_contract_address: Address,
     pub skip_deposit_check: bool,
-    pub deposit_id: U256,
+    pub deposit_id: DepositId,
     pub token_address: Address,
 }
 
 pub struct TerminateDepositOptionsInt {
-    pub lock_contract_address: Address,
     pub skip_deposit_check: bool,
-    pub deposit_id: U256,
+    pub deposit_id: DepositId,
 }
 
 pub async fn close_deposit(
@@ -1289,18 +1283,23 @@ pub async fn close_deposit(
 ) -> Result<(), PaymentError> {
     //let mut block_info: Option<Web3BlockInfo> = None;
     if !opt.skip_deposit_check {
-        let deposit_details =
-            deposit_details(web3.clone(), opt.deposit_id, opt.lock_contract_address).await?;
+        let deposit_details = deposit_details(web3.clone(), opt.deposit_id).await?;
         if deposit_details.amount_decimal.is_zero() {
-            log::error!("Deposit {} not found", opt.deposit_id);
+            log::error!("Deposit {} not found", opt.deposit_id.deposit_id);
 
-            return Err(err_custom_create!("Deposit {} not found", opt.deposit_id));
+            return Err(err_custom_create!(
+                "Deposit {} not found",
+                opt.deposit_id.deposit_id
+            ));
         }
         if deposit_details.spender != from {
-            log::error!("You are not the spender of deposit {}", opt.deposit_id);
+            log::error!(
+                "You are not the spender of deposit {}",
+                opt.deposit_id.deposit_id
+            );
             return Err(err_custom_create!(
                 "You are not the spender of deposit {}",
-                opt.deposit_id
+                opt.deposit_id.deposit_id
             ));
         }
     }
@@ -1310,7 +1309,7 @@ pub async fn close_deposit(
     let current_token_transfers = get_token_transfers_by_deposit_id(
         &mut *db_transaction,
         chain_id as i64,
-        &format!("{:#x}", opt.deposit_id),
+        &opt.deposit_id.to_db_string(),
     )
     .await
     .map_err(err_from!())?;
@@ -1319,7 +1318,7 @@ pub async fn close_deposit(
         if tt.deposit_finish > 0 {
             return Err(err_custom_create!(
                 "Deposit {} already being closed or closed",
-                opt.deposit_id
+                opt.deposit_id.deposit_id
             ));
         }
     }
@@ -1348,13 +1347,13 @@ pub async fn close_deposit(
         //empty transfer is just a marker that we need deposit to be closed
         let new_tt = TokenTransferDbObj {
             id: 0,
-            payment_id: Some(format!("close_deposit_{:#x}", opt.deposit_id)),
+            payment_id: Some(format!("close_deposit_{:#x}", opt.deposit_id.deposit_id)),
             from_addr: format!("{:#x}", from),
             receiver_addr: format!("{:#x}", Address::zero()),
             chain_id: chain_id as i64,
             token_addr: Some(format!("{:#x}", opt.token_address)),
             token_amount: "0".to_string(),
-            deposit_id: Some(format!("{:#x}", opt.deposit_id)),
+            deposit_id: Some(opt.deposit_id.to_db_string()),
             deposit_finish: 1,
             create_date: chrono::Utc::now(),
             tx_id: None,
@@ -1387,18 +1386,23 @@ pub async fn terminate_deposit(
     //let mut block_info: Option<Web3BlockInfo> = None;
     if !opt.skip_deposit_check {
         let deposit_id = opt.deposit_id;
-        let deposit_details =
-            deposit_details(web3.clone(), deposit_id, opt.lock_contract_address).await?;
+        let deposit_details = deposit_details(web3.clone(), deposit_id).await?;
         if deposit_details.amount_decimal.is_zero() {
-            log::error!("Deposit {} not found", deposit_id);
+            log::error!("Deposit {} not found", deposit_id.deposit_id);
 
-            return Err(err_custom_create!("Deposit {} not found", deposit_id));
+            return Err(err_custom_create!(
+                "Deposit {} not found",
+                deposit_id.deposit_id
+            ));
         }
         if deposit_details.funder != from {
-            log::error!("You are not the funder of deposit {}", opt.deposit_id);
+            log::error!(
+                "You are not the funder of deposit {}",
+                opt.deposit_id.deposit_id
+            );
             return Err(err_custom_create!(
                 "You are not the funder of deposit {}",
-                opt.deposit_id
+                opt.deposit_id.deposit_id
             ));
         }
         let est_time_left = (deposit_details.valid_to - Utc::now()).num_seconds();
@@ -1406,22 +1410,22 @@ pub async fn terminate_deposit(
         if est_time_left > 10 {
             log::error!(
                 "Deposit {} is not ready to be terminated. Estimated time left: {}",
-                deposit_id,
+                deposit_id.deposit_id,
                 est_time_left
             );
             return Err(err_custom_create!(
                 "Deposit {} is not ready to be terminated. Estimated time left: {}",
-                deposit_id,
+                deposit_id.deposit_id,
                 est_time_left
             ));
         }
     }
     let free_deposit_tx_id = create_terminate_deposit(
         from,
-        opt.lock_contract_address,
+        opt.deposit_id.lock_address,
         chain_id,
         None,
-        nonce_from_deposit_id(opt.deposit_id),
+        opt.deposit_id.nonce(),
     )?;
 
     let mut db_transaction = conn.begin().await.map_err(err_from!())?;

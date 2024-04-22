@@ -4,6 +4,7 @@ use erc20_payment_lib::runtime::deposit_details;
 use erc20_payment_lib::setup::PaymentSetup;
 use erc20_payment_lib_common::err_custom_create;
 use erc20_payment_lib_common::error::PaymentError;
+use erc20_payment_lib_common::model::DepositId;
 use std::str::FromStr;
 use structopt::StructOpt;
 use web3::types::{Address, U256};
@@ -65,12 +66,14 @@ pub async fn deposit_details_local(
 
     let details = deposit_details(
         web3,
-        deposit_id,
-        chain_cfg
-            .lock_contract
-            .clone()
-            .map(|c| c.address)
-            .expect("No lock contract found"),
+        DepositId {
+            deposit_id,
+            lock_address: chain_cfg
+                .lock_contract
+                .clone()
+                .map(|c| c.address)
+                .expect("No lock contract found"),
+        },
     )
     .await?;
     println!("{}", serde_json::to_string_pretty(&details).unwrap());

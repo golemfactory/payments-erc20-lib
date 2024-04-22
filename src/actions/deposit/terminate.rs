@@ -4,6 +4,7 @@ use erc20_payment_lib::runtime::{terminate_deposit, TerminateDepositOptionsInt};
 use erc20_payment_lib::setup::PaymentSetup;
 use erc20_payment_lib_common::err_custom_create;
 use erc20_payment_lib_common::error::PaymentError;
+use erc20_payment_lib_common::model::DepositId;
 use sqlx::SqlitePool;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -85,12 +86,14 @@ pub async fn terminate_deposit_local(
         chain_cfg.chain_id as u64,
         public_addr,
         TerminateDepositOptionsInt {
-            lock_contract_address: chain_cfg
-                .lock_contract
-                .clone()
-                .map(|c| c.address)
-                .expect("No lock contract found"),
-            deposit_id,
+            deposit_id: DepositId {
+                deposit_id,
+                lock_address: chain_cfg
+                    .lock_contract
+                    .clone()
+                    .map(|c| c.address)
+                    .expect("No lock contract found"),
+            },
             skip_deposit_check: terminate_deposit_options.skip_check,
         },
     )
