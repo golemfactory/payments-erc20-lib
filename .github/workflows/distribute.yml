@@ -35,7 +35,7 @@ jobs:
 
       - name: Distribute ETH
         run: |
-          erc20_processor distribute --amounts "0.0001;0.0001;0.0001;0.0001;0.0001" --recipients "$ETH_ADDRESS_0;$ETH_ADDRESS_1;$ETH_ADDRESS_2;$ETH_ADDRESS_3;$ETH_ADDRESS_4"
+          erc20_processor distribute --amounts "0.0002;0.0002;0.0002;0.0003;0.0004" --recipients "$ETH_ADDRESS_0;$ETH_ADDRESS_1;$ETH_ADDRESS_2;$ETH_ADDRESS_3;$ETH_ADDRESS_4"
           erc20_processor run
         env:
           ETH_PRIVATE_KEYS: ${{ secrets.HOLESKY_FUND_ENV }}
