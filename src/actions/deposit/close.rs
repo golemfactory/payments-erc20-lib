@@ -24,6 +24,12 @@ pub struct CloseDepositOptions {
     #[structopt(long = "skip-check", help = "Skip check deposit")]
     pub skip_check: bool,
 
+    #[structopt(
+        long = "lock-contract",
+        help = "Lock contract address (if not specified, it will be taken from config)"
+    )]
+    pub lock_contract: Option<Address>,
+
     #[structopt(long = "deposit-id", help = "Deposit id to close")]
     pub deposit_id: String,
 }
@@ -53,6 +59,16 @@ pub async fn close_deposit_local(
                 close_deposit_options.chain_name
             ))?;
 
+    let lock_contract = if let Some(lock_contract) = close_deposit_options.lock_contract {
+        lock_contract
+    } else {
+        chain_cfg
+            .lock_contract
+            .clone()
+            .map(|c| c.address)
+            .expect("No lock contract found")
+    };
+
     let payment_setup = PaymentSetup::new_empty(&config)?;
     let web3 = payment_setup.get_provider(chain_cfg.chain_id)?;
 
@@ -66,12 +82,8 @@ pub async fn close_deposit_local(
         public_addr,
         CloseDepositOptionsInt {
             deposit_id: DepositId {
-                lock_address: chain_cfg
-                    .lock_contract
-                    .clone()
-                    .map(|c| c.address)
-                    .expect("No lock contract found"),
                 deposit_id,
+                lock_address: lock_contract,
             },
             skip_deposit_check: close_deposit_options.skip_check,
             token_address: chain_cfg.token.address,
