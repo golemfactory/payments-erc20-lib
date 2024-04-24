@@ -1,0 +1,31 @@
+name: Clone master branch
+on:
+  push:
+    branches:
+      - master
+jobs:
+  clone-dev:
+    name: Clone dev branch
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with admin privileges
+        uses: actions/checkout@v5
+
+      - name: Set Git config
+        run: |
+            git config --local user.email "actions@github.com"
+            git config --local user.name "Github Actions"
+
+      - name: Merge dev to dev-fast
+        run: |
+            git fetch --unshallow
+            git checkout dev-fast
+            git pull
+            git merge master -m "Auto-merge master to master-fast"
+            git push
+
+      - name: Assert if branch dev-fast contains exactly same files as dev
+        run: |
+          [[ $(git diff origin/dev-fast origin/dev | wc -c) -eq 0 ]] || false
