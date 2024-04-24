@@ -229,6 +229,12 @@ pub struct TransferOptions {
 
     #[structopt(long = "deposit-id")]
     pub deposit_id: Option<String>,
+
+    #[structopt(
+        long = "lock-contract",
+        help = "Lock contract address (if not specified, it will be taken from config)"
+    )]
+    pub lock_contract: Option<Address>,
 }
 
 #[derive(StructOpt)]

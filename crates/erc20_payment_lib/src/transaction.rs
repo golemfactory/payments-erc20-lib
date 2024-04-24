@@ -10,7 +10,7 @@ use crate::utils::{datetime_from_u256_timestamp, ConversionError, StringConvExt,
 use crate::{err_custom_create, err_from};
 use chrono::Utc;
 use erc20_payment_lib_common::model::{
-    ChainTransferDbObj, ChainTxDbObj, TokenTransferDbObj, TxDbObj,
+    ChainTransferDbObj, ChainTxDbObj, DepositId, TokenTransferDbObj, TxDbObj,
 };
 use erc20_payment_lib_common::CantSignContent;
 use erc20_payment_lib_common::{
@@ -119,7 +119,7 @@ pub fn create_token_transfer(
     payment_id: Option<&str>,
     token_addr: Option<Address>,
     token_amount: U256,
-    deposit_id: Option<String>,
+    deposit_id: Option<DepositId>,
 ) -> TokenTransferDbObj {
     TokenTransferDbObj {
         id: 0,
@@ -129,7 +129,7 @@ pub fn create_token_transfer(
         chain_id,
         token_addr: token_addr.map(|addr| format!("{addr:#x}")),
         token_amount: token_amount.to_string(),
-        deposit_id,
+        deposit_id: deposit_id.map(|d| d.to_db_string()),
         deposit_finish: 0,
         create_date: Utc::now(),
         tx_id: None,

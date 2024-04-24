@@ -41,13 +41,14 @@ use erc20_payment_lib::runtime::{
 use erc20_payment_lib::server::web::{runtime_web_scope, ServerData};
 use erc20_payment_lib::setup::PaymentSetup;
 use erc20_payment_lib_common::init_metrics;
-use erc20_payment_lib_common::model::TokenTransferDbObj;
+use erc20_payment_lib_common::model::{DepositId, TokenTransferDbObj};
 use erc20_payment_lib_common::utils::{DecimalConvExt, StringConvExt};
 use erc20_payment_lib_extra::{account_balance, generate_test_payments};
 use rust_decimal::Decimal;
 use std::sync::Arc;
 use structopt::StructOpt;
 use tokio::sync::{broadcast, Mutex};
+use web3::types::U256;
 
 async fn main_internal() -> Result<(), PaymentError> {
     dotenv::dotenv().ok();
@@ -552,6 +553,29 @@ async fn main_internal() -> Result<(), PaymentError> {
             };
             let amount_decimal = amount_str.to_eth().unwrap();
 
+            let deposit_id_str = if let Some(deposit_id) = single_transfer_options.deposit_id {
+                let lock_contract =
+                    if let Some(lock_contract) = single_transfer_options.lock_contract {
+                        lock_contract
+                    } else {
+                        chain_cfg
+                            .lock_contract
+                            .clone()
+                            .map(|c| c.address)
+                            .expect("No lock contract found")
+                    };
+
+                Some(
+                    DepositId {
+                        deposit_id: U256::from_str_radix(&deposit_id, 16)
+                            .map_err(|e| err_custom_create!("Invalid deposit id: {}", e))?,
+                        lock_address: lock_contract,
+                    }
+                    .to_db_string(),
+                )
+            } else {
+                None
+            };
             let mut tt = insert_token_transfer_with_deposit_check(
                 &conn.clone().unwrap(),
                 &TokenTransferDbObj {
@@ -562,7 +586,7 @@ async fn main_internal() -> Result<(), PaymentError> {
                     chain_id: chain_cfg.chain_id,
                     token_addr: token,
                     token_amount: amount_str,
-                    deposit_id: single_transfer_options.deposit_id,
+                    deposit_id: deposit_id_str,
                     deposit_finish: 0,
                     create_date: Default::default(),
                     tx_id: None,

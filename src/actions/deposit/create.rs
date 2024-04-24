@@ -65,6 +65,12 @@ pub struct CreateDepositOptions {
     )]
     pub deposit_nonce: Option<u64>,
 
+    #[structopt(
+        long = "lock-contract",
+        help = "Lock contract address (if not specified, it will be taken from config)"
+    )]
+    pub lock_contract: Option<Address>,
+
     #[structopt(long = "skip-allowance", help = "Skip allowance check")]
     pub skip_allowance: bool,
 }
@@ -95,6 +101,16 @@ pub async fn make_deposit_local(
                 make_deposit_options.chain_name
             ))?;
 
+    let lock_contract = if let Some(lock_contract) = make_deposit_options.lock_contract {
+        lock_contract
+    } else {
+        chain_cfg
+            .lock_contract
+            .clone()
+            .map(|c| c.address)
+            .expect("No lock contract found")
+    };
+
     if make_deposit_options.block_for.is_some() && make_deposit_options.block_until.is_some() {
         return Err(err_custom_create!(
             "Cannot specify both block-for and block-until"
@@ -121,11 +137,7 @@ pub async fn make_deposit_local(
             web3.clone(),
             public_addr,
             chain_cfg.token.address,
-            chain_cfg
-                .lock_contract
-                .clone()
-                .map(|c| c.address)
-                .expect("No lock contract found"),
+            lock_contract,
         )
         .await?;
 
@@ -138,14 +150,7 @@ pub async fn make_deposit_local(
             let allowance_request = AllowanceRequest {
                 owner: format!("{:#x}", public_addr),
                 token_addr: format!("{:#x}", chain_cfg.token.address),
-                spender_addr: format!(
-                    "{:#x}",
-                    chain_cfg
-                        .lock_contract
-                        .clone()
-                        .map(|c| c.address)
-                        .expect("No mint contract")
-                ),
+                spender_addr: format!("{:#x}", lock_contract),
                 chain_id: chain_cfg.chain_id,
                 amount: U256::MAX,
             };
@@ -186,11 +191,7 @@ pub async fn make_deposit_local(
         public_addr,
         chain_cfg.token.address,
         CreateDepositOptionsInt {
-            lock_contract_address: chain_cfg
-                .lock_contract
-                .clone()
-                .map(|c| c.address)
-                .expect("No lock contract found"),
+            lock_contract_address: lock_contract,
             spender,
             skip_balance_check: make_deposit_options.skip_balance_check,
             amount: make_deposit_options.amount,

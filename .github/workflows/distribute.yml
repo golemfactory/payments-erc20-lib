@@ -35,16 +35,20 @@ jobs:
 
       - name: Distribute ETH
         run: |
-          erc20_processor distribute --amounts "0.0001;0.0001;0.0001;0.0001;0.0001" --recipients "$ETH_ADDRESS_0;$ETH_ADDRESS_1;$ETH_ADDRESS_2;$ETH_ADDRESS_3;$ETH_ADDRESS_4"
+          erc20_processor distribute --amounts "0.0002;0.0002;0.0002;0.0003;0.0004" --recipients "$ETH_ADDRESS_0;$ETH_ADDRESS_1;$ETH_ADDRESS_2;$ETH_ADDRESS_3;$ETH_ADDRESS_4"
           erc20_processor run
         env:
           ETH_PRIVATE_KEYS: ${{ secrets.HOLESKY_FUND_ENV }}
+
+      - name: Wait for blockchain propagate over all RPC nodes (we are talking with multiple RPC nodes)
+        run: |
+          sleep 30
 
       - name: Transfer all left ETH tokens
         run: |
           set -x 
           erc20_processor show-config > config.toml.tmp
-          sed 's/^max-fee-per-gas = "20"$/max-fee-per-gas = "1.1"/' config.toml.tmp > config-payments.toml
+          sed 's/^max-fee-per-gas = "20"$/max-fee-per-gas = "5.1"/' config.toml.tmp > config-payments.toml
           erc20_processor transfer --account-no 0 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all
           erc20_processor transfer --account-no 1 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all
           erc20_processor transfer --account-no 2 --recipient 0x0079dce233830c7b0cd41116214e17b93c64e030 --token eth --all

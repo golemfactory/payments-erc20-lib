@@ -4,6 +4,7 @@ use erc20_payment_lib::runtime::{terminate_deposit, TerminateDepositOptionsInt};
 use erc20_payment_lib::setup::PaymentSetup;
 use erc20_payment_lib_common::err_custom_create;
 use erc20_payment_lib_common::error::PaymentError;
+use erc20_payment_lib_common::model::DepositId;
 use sqlx::SqlitePool;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -26,6 +27,12 @@ pub struct TerminateDepositOptions {
 
     #[structopt(long = "deposit-id", help = "Deposit id to terminate.")]
     pub deposit_id: Option<String>,
+
+    #[structopt(
+        long = "lock-contract",
+        help = "Lock contract address (if not specified, it will be taken from config)"
+    )]
+    pub lock_contract: Option<Address>,
 
     #[structopt(long = "deposit-nonce", help = "Deposit nonce to terminate.")]
     pub deposit_nonce: Option<u64>,
@@ -54,6 +61,16 @@ pub async fn terminate_deposit_local(
             "Chain {} not found in config file",
             terminate_deposit_options.chain_name
         ))?;
+
+    let lock_contract = if let Some(lock_contract) = terminate_deposit_options.lock_contract {
+        lock_contract
+    } else {
+        chain_cfg
+            .lock_contract
+            .clone()
+            .map(|c| c.address)
+            .expect("No lock contract found")
+    };
 
     let payment_setup = PaymentSetup::new_empty(&config)?;
     let web3 = payment_setup.get_provider(chain_cfg.chain_id)?;
@@ -85,12 +102,10 @@ pub async fn terminate_deposit_local(
         chain_cfg.chain_id as u64,
         public_addr,
         TerminateDepositOptionsInt {
-            lock_contract_address: chain_cfg
-                .lock_contract
-                .clone()
-                .map(|c| c.address)
-                .expect("No lock contract found"),
-            deposit_id,
+            deposit_id: DepositId {
+                deposit_id,
+                lock_address: lock_contract,
+            },
             skip_deposit_check: terminate_deposit_options.skip_check,
         },
     )
