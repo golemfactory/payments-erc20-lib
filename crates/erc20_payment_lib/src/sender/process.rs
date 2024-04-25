@@ -312,7 +312,7 @@ pub async fn process_transaction(
 
     if web3_tx_dao.broadcast_date.is_none() {
         log::info!(
-            "Sending transaction {} with nonce {}",
+            "Sending transaction with id: {} with nonce {}",
             web3_tx_dao.id,
             transaction_nonce
         );
@@ -580,7 +580,7 @@ pub async fn process_transaction(
             }
         } else {
             log::info!(
-                "Latest nonce is not yet reached: {} vs {}",
+                "Waiting until transaction processed on blockchain. Latest nonce too low: {} vs {}",
                 latest_nonce,
                 transaction_nonce + 1
             );
