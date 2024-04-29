@@ -131,6 +131,41 @@ verify-interval-secs = 60
 allowed-head-behind-secs = 12000
 dns-source = "goerli.rpc-node.dev.golem.network."
 
+[chain.sepolia]
+chain-name = "Sepolia"
+chain-id = 11155111
+currency-symbol = "tETH"
+priority-fee = 0.000001
+max-fee-per-gas = 20.0
+transaction-timeout = 100
+token = { address = "0x167b15ada84c63427c6c813B915a42eFC72E7175", symbol = "tGLM" }
+mint-contract = { address = "0x31A2a20956a40c2F358Fa5cec59D55a9C5d6fF9A", max-glm-allowed = 400 }
+confirmation-blocks = 0
+block-explorer-url = "https://sepolia.etherscan.io"
+external-source-check-interval = 300
+
+[[chain.sepolia.rpc-endpoints]]
+names = """
+    endpoints.omniatech.io/v1/eth/sepolia/public
+    ethereum-sepolia.blockpi.network/v1/rpc/public
+    eth-sepolia.public.blastapi.io
+    eth-sepolia-public.unifra.io
+    sepolia.gateway.tenderly.co
+    gateway.tenderly.co/public/sepolia
+"""
+
+endpoints = """
+    https://endpoints.omniatech.io/v1/eth/sepolia/public
+    https://ethereum-sepolia.blockpi.network/v1/rpc/public
+    https://eth-sepolia.public.blastapi.io
+    https://eth-sepolia-public.unifra.io
+    https://sepolia.gateway.tenderly.co
+    https://gateway.tenderly.co/public/sepolia
+"""
+priority = 0
+max-timeout-ms = 5000
+verify-interval-secs = 60
+allowed-head-behind-secs = 120
 
 [chain.holesky]
 chain-name = "Holesky"
