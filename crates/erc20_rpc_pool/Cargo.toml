@@ -2,7 +2,7 @@
 name = "erc20_rpc_pool"
 description = "Rpc pool for web3 library"
 authors = ["Sieciech Czajka <sieciech.czajka@golem.network>"]
-version = "0.4.1"
+version = "0.4.2"
 edition = "2021"
 license = "MIT"
 
