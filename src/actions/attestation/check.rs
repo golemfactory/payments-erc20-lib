@@ -109,10 +109,7 @@ pub async fn check_attestation_local(
             .map_err(|e| err_custom_create!("Failed to serialize attestation details: {}", e))?
     );
 
-    let items = attestation_schema
-        .schema
-        .split(',')
-        .collect::<Vec<&str>>();
+    let items = attestation_schema.schema.split(',').collect::<Vec<&str>>();
     log::debug!("There are {} items in the schema", items.len());
     let mut param_types = Vec::new();
     let mut param_names = Vec::new();
