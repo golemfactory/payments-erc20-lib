@@ -144,13 +144,7 @@ panic = "unwind"
 
 [profile.release-lto]
 inherits = "release"
-incremental = false
-opt-level = 1
-panic = "unwind"
-
-#[profile.release-lto]
-#inherits = "release"
-#codegen-units = 1
-#lto = "fat"
-#opt-level = 3
-#panic = "abort"
+codegen-units = 1
+lto = "fat"
+opt-level = 3
+panic = "abort"
