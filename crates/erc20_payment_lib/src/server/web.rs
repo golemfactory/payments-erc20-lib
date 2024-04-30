@@ -1234,7 +1234,7 @@ struct AttestationItemInfo {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct AttestationCheckResult {
+pub struct AttestationCheckResult {
     chain_id: u64,
     chain: String,
     attestation: Attestation,
@@ -1246,8 +1246,6 @@ pub async fn check_attestation(
     data: Data<Box<ServerData>>,
     req: HttpRequest,
 ) -> actix_web::Result<web::Json<AttestationCheckResult>> {
-    let _my_data = data.shared_state.lock().unwrap();
-
     let attestation_uid = req.match_info().get("uid").unwrap_or("");
     let chain_name = req.match_info().get("chain").unwrap_or("");
     let chain: &ChainSetup = data

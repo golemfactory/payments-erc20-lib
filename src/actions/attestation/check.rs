@@ -111,14 +111,13 @@ pub async fn check_attestation_local(
 
     let items = attestation_schema
         .schema
-        .split(",")
-        .into_iter()
+        .split(',')
         .collect::<Vec<&str>>();
     log::debug!("There are {} items in the schema", items.len());
     let mut param_types = Vec::new();
     let mut param_names = Vec::new();
     for item in items {
-        let items2 = item.trim().split(" ").into_iter().collect::<Vec<&str>>();
+        let items2 = item.trim().split(' ').collect::<Vec<&str>>();
         if items2.len() != 2 {
             log::error!("Invalid item in schema: {}", item);
             return Err(err_custom_create!("Invalid item in schema: {}", item));
