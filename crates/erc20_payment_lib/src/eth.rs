@@ -10,7 +10,7 @@ use erc20_payment_lib_common::utils::{
 };
 use erc20_rpc_pool::Web3RpcPool;
 use secp256k1::{PublicKey, SecretKey};
-use serde::{Serialize};
+use serde::Serialize;
 use sha3::Digest;
 use sha3::Keccak256;
 use std::sync::Arc;

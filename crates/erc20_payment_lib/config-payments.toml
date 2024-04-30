@@ -131,6 +131,42 @@ verify-interval-secs = 60
 allowed-head-behind-secs = 12000
 dns-source = "goerli.rpc-node.dev.golem.network."
 
+[chain.base]
+chain-name = "Base"
+chain-id = 8453
+currency-symbol = "ETH"
+priority-fee = 0.000001
+max-fee-per-gas = 20.0
+transaction-timeout = 100
+attestation-contract = { address = "0x357458739f90461b99789350868cd7cf330dd7ee" }
+schema-registry-contract = { address = "0x4200000000000000000000000000000000000020" }
+token = { address = "0x1200000000000000000000000000000000000021", symbol = "GLM" }
+confirmation-blocks = 0
+block-explorer-url = "https://base.etherscan.io"
+external-source-check-interval = 300
+
+[[chain.base.rpc-endpoints]]
+names = """
+    base.gateway.tenderly.co,
+    base-mainnet.public.blastapi.io,
+    base.blockpi.network/v1/rpc/public,
+    base.meowrpc.com,
+    base-pokt.nodies.app,
+    base.llamarpc.com
+"""
+endpoints = """
+    https://base.gateway.tenderly.co,
+    https://base-mainnet.public.blastapi.io,
+    https://base.blockpi.network/v1/rpc/public,
+    https://base.meowrpc.com,
+    https://base-pokt.nodies.app,
+    https://base.llamarpc.com
+"""
+priority = 0
+max-timeout-ms = 5000
+verify-interval-secs = 60
+allowed-head-behind-secs = 120
+
 [chain.sepolia]
 chain-name = "Sepolia"
 chain-id = 11155111
@@ -195,7 +231,6 @@ names = """
     holesky.drpc.org,
     holesky.rpc.thirdweb.com
 """
-
 endpoints = """
     https://holesky.publicnode.com,
     https://1rpc.io/holesky,
@@ -275,6 +310,8 @@ transaction-timeout = 100
 token = { address = "0x0B220b82F3eA3B7F6d9A1D8ab58930C064A2b5Bf", symbol = "GLM" }
 lock-contract = { address = "0x633193F5524849C84368ADF39aFDB0EedFAf8B29" }
 multi-contract = { address = "0x50100d4faf5f3b09987dea36dc2eddd57a3e561b", max-at-once = 10 }
+attestation-contract = { address = "0x5E634ef5355f45A855d02D66eCD687b1502AF790" }
+schema-registry-contract = { address = "0x7876EEF51A891E737AF8ba5A5E0f0Fd29073D5a7" }
 confirmation-blocks = 1
 block-explorer-url = "https://polygonscan.com"
 external-source-check-interval = 300
