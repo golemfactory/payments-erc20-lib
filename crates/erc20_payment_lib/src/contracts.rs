@@ -5,7 +5,7 @@ use crate::error::PaymentError;
 use std::str::FromStr;
 use web3::contract::tokens::Tokenize;
 use web3::contract::Contract;
-use web3::ethabi::{FixedBytes, Hash};
+
 use web3::transports::Http;
 use web3::types::{Address, H256, U256};
 use web3::{ethabi, Transport, Web3};

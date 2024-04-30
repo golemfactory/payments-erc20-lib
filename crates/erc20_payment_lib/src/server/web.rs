@@ -16,7 +16,7 @@ use chrono::{DateTime, Utc};
 use erc20_payment_lib_common::model::DepositId;
 use erc20_payment_lib_common::ops::*;
 use erc20_payment_lib_common::utils::datetime_from_u256_timestamp;
-use erc20_payment_lib_common::{err_custom_create, export_metrics_to_prometheus, FaucetData};
+use erc20_payment_lib_common::{export_metrics_to_prometheus, FaucetData};
 use erc20_rpc_pool::VerifyEndpointResult;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -1246,7 +1246,7 @@ pub async fn check_attestation(
     data: Data<Box<ServerData>>,
     req: HttpRequest,
 ) -> actix_web::Result<web::Json<AttestationCheckResult>> {
-    let my_data = data.shared_state.lock().unwrap();
+    let _my_data = data.shared_state.lock().unwrap();
 
     let attestation_uid = req.match_info().get("uid").unwrap_or("");
     let chain_name = req.match_info().get("chain").unwrap_or("");
