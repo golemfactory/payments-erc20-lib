@@ -67,6 +67,12 @@ pub fn encode_get_attestation(
     contract_encode(&EAS_CONTRACT_TEMPLATE, "getAttestation", (uid, ))
 }
 
+pub fn encode_get_schema(
+    uid: H256,
+) -> Result<Vec<u8>, web3::ethabi::Error> {
+    contract_encode(&SCHEMA_REGISTRY_TEMPLATE, "getSchema", (uid, ))
+}
+
 pub fn encode_erc20_balance_of(address: Address) -> Result<Vec<u8>, web3::ethabi::Error> {
     contract_encode(&ERC20_CONTRACT_TEMPLATE, "balanceOf", (address,))
 }
