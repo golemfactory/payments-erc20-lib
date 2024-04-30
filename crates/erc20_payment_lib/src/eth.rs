@@ -148,7 +148,7 @@ pub async fn get_schema_details(
     ))?;
 
     let decoded = decoded[0].clone().into_tuple().unwrap();
-    log::info!("Decoded attestation: {:?}", decoded);
+    log::info!("Decoded attestation schema: {:?}", decoded);
     let schema = AttestationSchema {
         uid: H256::from_slice(decoded[0].clone().into_fixed_bytes().unwrap().as_slice()),
         resolver: decoded[1].clone().into_address().unwrap(),
@@ -177,7 +177,7 @@ pub async fn get_attestation_details(
     web3: Arc<Web3RpcPool>,
     uid: H256,
     eas_contract_address: Address,
-) -> Result<Attestation, PaymentError> {
+) -> Result<Option<Attestation>, PaymentError> {
     let res = web3
         .eth_call(
             CallRequest {
@@ -214,6 +214,9 @@ pub async fn get_attestation_details(
     ))?;
 
     let decoded = decoded[0].clone().into_tuple().unwrap();
+    if decoded[0] == ethabi::Token::FixedBytes(vec![0; 32]) {
+        return Ok(None);
+    }
     log::info!("Decoded attestation: {:?}", decoded);
     let attestation = Attestation {
         uid: H256::from_slice(decoded[0].clone().into_fixed_bytes().unwrap().as_slice()),
@@ -229,7 +232,7 @@ pub async fn get_attestation_details(
         data: Bytes::from(decoded[9].clone().into_bytes().unwrap()),
     };
 
-    Ok(attestation)
+    Ok(Some(attestation))
 }
 
 pub async fn get_deposit_details(

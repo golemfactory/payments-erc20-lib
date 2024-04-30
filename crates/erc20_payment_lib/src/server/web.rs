@@ -1303,7 +1303,13 @@ pub async fn check_attestation(
     log::info!("Querying attestation contract: {:#x}", contract.address);
 
     let attestation = match get_attestation_details(web3.clone(), uid, contract.address).await {
-        Ok(attestation) => attestation,
+        Ok(Some(attestation)) => attestation,
+        Ok(None) => {
+            return Err(ErrorBadRequest(format!(
+                "Attestation with uid: {:#x} not found on chain {}",
+                uid, chain_name
+            )));
+        }
         Err(e) => {
             log::error!("Failed to get attestation details: {}", e);
             return Err(ErrorBadRequest(format!(
@@ -1343,17 +1349,13 @@ pub async fn check_attestation(
         )))?
     );
 
-    let items = attestation_schema
-        .schema
-        .split(",")
-        .into_iter()
-        .collect::<Vec<&str>>();
+    let items = attestation_schema.schema.split(',').collect::<Vec<&str>>();
     log::debug!("There are {} items in the schema", items.len());
     let mut param_types = Vec::new();
     let mut param_names = Vec::new();
 
     for item in items {
-        let items2 = item.trim().split(" ").into_iter().collect::<Vec<&str>>();
+        let items2 = item.trim().split(' ').collect::<Vec<&str>>();
         if items2.len() != 2 {
             log::error!("Invalid item in schema: {}", item);
             return Err(ErrorBadRequest(format!("Invalid item in schema: {}", item)));
@@ -1385,13 +1387,13 @@ pub async fn check_attestation(
         });
     }
 
-    return Ok(web::Json(AttestationCheckResult {
+    Ok(web::Json(AttestationCheckResult {
         chain_id: chain.chain_id as u64,
         chain: chain_name.to_string(),
         attestation,
         schema: attestation_schema,
         params: decoded_items,
-    }));
+    }))
 }
 
 pub fn runtime_web_scope(

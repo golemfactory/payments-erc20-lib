@@ -138,7 +138,7 @@ currency-symbol = "ETH"
 priority-fee = 0.000001
 max-fee-per-gas = 20.0
 transaction-timeout = 100
-attestation-contract = { address = "0x357458739f90461b99789350868cd7cf330dd7ee" }
+attestation-contract = { address = "0x4200000000000000000000000000000000000021" }
 schema-registry-contract = { address = "0x4200000000000000000000000000000000000020" }
 token = { address = "0x1200000000000000000000000000000000000021", symbol = "GLM" }
 confirmation-blocks = 0

@@ -73,7 +73,14 @@ pub async fn check_attestation_local(
     log::info!("Querying attestation contract: {:#x}", contract.address);
 
     let attestation = match get_attestation_details(web3.clone(), uid, contract.address).await {
-        Ok(attestation) => attestation,
+        Ok(Some(attestation)) => attestation,
+        Ok(None) => {
+            return Err(err_custom_create!(
+                "Attestation with uid: {:#x} not found on chain {}",
+                uid,
+                options.chain_name
+            ));
+        }
         Err(e) => {
             log::error!("Failed to get attestation details: {}", e);
             return Err(err_custom_create!(
