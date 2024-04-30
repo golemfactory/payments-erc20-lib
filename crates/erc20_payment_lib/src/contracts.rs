@@ -5,10 +5,10 @@ use crate::error::PaymentError;
 use std::str::FromStr;
 use web3::contract::tokens::Tokenize;
 use web3::contract::Contract;
+use web3::ethabi::{FixedBytes, Hash};
 use web3::transports::Http;
 use web3::types::{Address, H256, U256};
 use web3::{ethabi, Transport, Web3};
-use web3::ethabi::{FixedBytes, Hash};
 
 // todo remove DUMMY_RPC_PROVIDER and use ABI instead
 // todo change to once_cell
@@ -61,16 +61,12 @@ where
         .and_then(|function| function.encode_input(&params.into_tokens()))
 }
 
-pub fn encode_get_attestation(
-    uid: H256,
-) -> Result<Vec<u8>, web3::ethabi::Error> {
-    contract_encode(&EAS_CONTRACT_TEMPLATE, "getAttestation", (uid, ))
+pub fn encode_get_attestation(uid: H256) -> Result<Vec<u8>, web3::ethabi::Error> {
+    contract_encode(&EAS_CONTRACT_TEMPLATE, "getAttestation", (uid,))
 }
 
-pub fn encode_get_schema(
-    uid: H256,
-) -> Result<Vec<u8>, web3::ethabi::Error> {
-    contract_encode(&SCHEMA_REGISTRY_TEMPLATE, "getSchema", (uid, ))
+pub fn encode_get_schema(uid: H256) -> Result<Vec<u8>, web3::ethabi::Error> {
+    contract_encode(&SCHEMA_REGISTRY_TEMPLATE, "getSchema", (uid,))
 }
 
 pub fn encode_erc20_balance_of(address: Address) -> Result<Vec<u8>, web3::ethabi::Error> {

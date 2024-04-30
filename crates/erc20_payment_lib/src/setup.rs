@@ -309,16 +309,16 @@ impl PaymentSetup {
                         .distributor_contract
                         .clone()
                         .map(|m| m.address),
-                    eas_contract_settings: chain_config.1.attestation_contract.clone().map(|m| {
-                        EasContractSettings {
-                            address: m.address,
-                        }
-                    }),
-                    eas_schema_registry_settings: chain_config.1.schema_registry_contract.clone().map(
-                        |m| EasSchemaRegistrySettings {
-                            address: m.address,
-                        },
-                    ),
+                    eas_contract_settings: chain_config
+                        .1
+                        .attestation_contract
+                        .clone()
+                        .map(|m| EasContractSettings { address: m.address }),
+                    eas_schema_registry_settings: chain_config
+                        .1
+                        .schema_registry_contract
+                        .clone()
+                        .map(|m| EasSchemaRegistrySettings { address: m.address }),
                     faucet_setup,
 
                     transaction_timeout: chain_config.1.transaction_timeout,

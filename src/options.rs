@@ -1,5 +1,6 @@
 use std::{fmt::Debug, path::PathBuf};
 
+use crate::actions::attestation::check::AttestationCheckOptions;
 use crate::actions::deposit::close::CloseDepositOptions;
 use crate::actions::deposit::create::CreateDepositOptions;
 use crate::actions::deposit::details::CheckDepositOptions;
@@ -7,7 +8,6 @@ use crate::actions::deposit::terminate::TerminateDepositOptions;
 use erc20_payment_lib_extra::{BalanceOptions, GenerateOptions};
 use structopt::StructOpt;
 use web3::types::Address;
-use crate::actions::attestation::check::AttestationCheckOptions;
 
 #[derive(StructOpt)]
 #[structopt(about = "Payment admin tool - run options")]
