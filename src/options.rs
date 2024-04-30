@@ -7,6 +7,7 @@ use crate::actions::deposit::terminate::TerminateDepositOptions;
 use erc20_payment_lib_extra::{BalanceOptions, GenerateOptions};
 use structopt::StructOpt;
 use web3::types::Address;
+use crate::actions::attestation::check::AttestationCheckOptions;
 
 #[derive(StructOpt)]
 #[structopt(about = "Payment admin tool - run options")]
@@ -399,6 +400,15 @@ pub struct CleanupOptions {
 }
 
 #[derive(StructOpt)]
+#[structopt(about = "Attestation commands")]
+pub enum AttestationCommands {
+    Check {
+        #[structopt(flatten)]
+        options: AttestationCheckOptions,
+    },
+}
+
+#[derive(StructOpt)]
 #[structopt(about = "Commands for deposit management")]
 pub enum DepositCommands {
     Create {
@@ -446,6 +456,10 @@ pub enum PaymentCommands {
     MintTestTokens {
         #[structopt(flatten)]
         mint_test_tokens_options: MintTestTokensOptions,
+    },
+    Attestation {
+        #[structopt(flatten)]
+        attest: AttestationCommands,
     },
     Deposit {
         #[structopt(flatten)]

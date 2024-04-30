@@ -1,4 +1,4 @@
-use crate::config::{AdditionalOptions, Config};
+use crate::config::{AdditionalOptions, Config, EasContractSettings, EasSchemaRegistrySettings};
 use crate::error::ErrorBag;
 use crate::error::PaymentError;
 
@@ -52,6 +52,8 @@ pub struct ChainSetup {
     pub multi_contract_address: Option<Address>,
     pub lock_contract_address: Option<Address>,
     pub distribute_contract_address: Option<Address>,
+    pub eas_contract_settings: Option<EasContractSettings>,
+    pub eas_schema_registry_settings: Option<EasSchemaRegistrySettings>,
     pub faucet_setup: FaucetSetup,
     pub multi_contract_max_at_once: usize,
     pub transaction_timeout: u64,
@@ -307,6 +309,16 @@ impl PaymentSetup {
                         .distributor_contract
                         .clone()
                         .map(|m| m.address),
+                    eas_contract_settings: chain_config.1.attestation_contract.clone().map(|m| {
+                        EasContractSettings {
+                            address: m.address,
+                        }
+                    }),
+                    eas_schema_registry_settings: chain_config.1.schema_registry_contract.clone().map(
+                        |m| EasSchemaRegistrySettings {
+                            address: m.address,
+                        },
+                    ),
                     faucet_setup,
 
                     transaction_timeout: chain_config.1.transaction_timeout,

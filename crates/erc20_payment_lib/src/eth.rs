@@ -1,17 +1,16 @@
-use crate::contracts::{
-    encode_erc20_allowance, encode_erc20_balance_of, encode_get_deposit_details,
-};
+use crate::contracts::{encode_erc20_allowance, encode_erc20_balance_of, encode_get_attestation, encode_get_deposit_details};
 use crate::error::*;
 use crate::{err_create, err_custom_create, err_from};
-use erc20_payment_lib_common::utils::{datetime_from_u256_timestamp, U256ConvExt};
+use erc20_payment_lib_common::utils::{datetime_from_u256_timestamp, datetime_from_u256_with_option, U256ConvExt};
 use erc20_rpc_pool::Web3RpcPool;
 use secp256k1::{PublicKey, SecretKey};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha3::Digest;
 use sha3::Keccak256;
 use std::sync::Arc;
+use chrono::{DateTime, Utc};
 use web3::ethabi;
-use web3::types::{Address, BlockId, BlockNumber, Bytes, CallRequest, U256, U64};
+use web3::types::{Address, BlockId, BlockNumber, Bytes, CallRequest, H256, U256, U64};
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -99,6 +98,78 @@ pub fn nonce_from_deposit_id(deposit_id: U256) -> u64 {
     let mut slice: [u8; 32] = [0; 32];
     deposit_id.to_big_endian(&mut slice);
     u64::from_be_bytes(slice[24..32].try_into().unwrap())
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Attestation {
+    pub id: H256,
+    pub schema: H256,
+    pub time: DateTime<Utc>,
+    pub expiration_time: Option<DateTime<Utc>>,
+    pub revocation_time: Option<DateTime<Utc>>,
+    pub refUID: H256,
+    pub recipient: Address,
+    pub attester: Address,
+    pub revocable: bool,
+    pub data: Bytes
+}
+
+pub async fn get_attestation_details(
+    web3: Arc<Web3RpcPool>,
+    uid: H256,
+    eas_contract_address: Address,
+) -> Result<Attestation, PaymentError> {
+    let res = web3
+        .eth_call(
+            CallRequest {
+                to: Some(eas_contract_address),
+                data: Some(encode_get_attestation(uid).unwrap().into()),
+                ..Default::default()
+            },
+            None,
+        )
+        .await
+        .map_err(err_from!())?;
+
+    let decoded = ethabi::decode(
+        &[
+            ethabi::ParamType::Tuple(
+                vec![
+                    ethabi::ParamType::FixedBytes(32),
+                    ethabi::ParamType::FixedBytes(32),
+                    ethabi::ParamType::Uint(64),
+                    ethabi::ParamType::Uint(64),
+                    ethabi::ParamType::Uint(64),
+                    ethabi::ParamType::FixedBytes(32),
+                    ethabi::ParamType::Address,
+                    ethabi::ParamType::Address,
+                    ethabi::ParamType::Uint(64),
+                    ethabi::ParamType::Bytes
+                ]
+            )
+        ],
+        &res.0
+    ).map_err(|err|err_custom_create!(
+        "Failed to decode attestation view from bytes, check if proper contract and contract method is called: {}",
+        err
+    ))?;
+
+    let decoded = decoded[0].clone().into_tuple().unwrap();
+    log::info!("Decoded attestation: {:?}", decoded);
+    let attestation = Attestation {
+        id: H256::from_slice(decoded[0].clone().into_fixed_bytes().unwrap().as_slice()),
+        schema: H256::from_slice(decoded[1].clone().into_fixed_bytes().unwrap().as_slice()),
+        time: datetime_from_u256_with_option(decoded[2].clone().into_uint().unwrap()).ok_or(err_custom_create!("Attestation timestamp out of range"))?,
+        expiration_time: datetime_from_u256_with_option(decoded[3].clone().into_uint().unwrap()),
+        revocation_time: datetime_from_u256_with_option(decoded[4].clone().into_uint().unwrap()),
+        refUID: H256::from_slice(decoded[5].clone().into_fixed_bytes().unwrap().as_slice()),
+        recipient: decoded[6].clone().into_address().unwrap(),
+        attester: decoded[7].clone().into_address().unwrap(),
+        revocable: decoded[8].clone().into_uint().unwrap().as_u64() != 0,
+        data: Bytes::from(decoded[9].clone().into_bytes().unwrap())
+    };
+
+    Ok(attestation)
 }
 
 pub async fn get_deposit_details(
