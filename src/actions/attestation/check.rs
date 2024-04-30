@@ -1,15 +1,13 @@
-use std::str::FromStr;
 use sqlx::SqlitePool;
 use structopt::StructOpt;
 use web3::ethabi;
-use web3::ethabi::{param_type, ParamType};
-use web3::types::{Address, H256};
+
 use erc20_payment_lib::config::Config;
 use erc20_payment_lib::eth::{get_attestation_details, get_schema_details};
 use erc20_payment_lib::setup::PaymentSetup;
 use erc20_payment_lib_common::err_custom_create;
 use erc20_payment_lib_common::error::PaymentError;
-use crate::actions::deposit::close::CloseDepositOptions;
+use web3::types::H256;
 
 #[derive(StructOpt)]
 #[structopt(about = "Check attestation")]
@@ -36,14 +34,10 @@ pub async fn check_attestation_local(
             options.chain_name
         ))?;
 
-
     let decoded_bytes = match hex::decode(options.attestation_id.replace("0x", "")) {
         Ok(bytes) => bytes,
         Err(e) => {
-            return Err(err_custom_create!(
-                "Failed to decode attestation id: {}",
-                e
-            ));
+            return Err(err_custom_create!("Failed to decode attestation id: {}", e));
         }
     };
 
@@ -78,16 +72,8 @@ pub async fn check_attestation_local(
     };
     log::info!("Querying attestation contract: {:#x}", contract.address);
 
-
-
-    let attestation = match get_attestation_details(
-        web3.clone(),
-        uid,
-        contract.address,
-    ).await {
-        Ok(attestation) => {
-            attestation
-        }
+    let attestation = match get_attestation_details(web3.clone(), uid, contract.address).await {
+        Ok(attestation) => attestation,
         Err(e) => {
             log::error!("Failed to get attestation details: {}", e);
             return Err(err_custom_create!(
@@ -97,36 +83,37 @@ pub async fn check_attestation_local(
         }
     };
 
-    let attestation_schema = match get_schema_details(
-        web3,
-        attestation.schema,
-        schema_contract.address,
-    ).await {
-        Ok(attestation_schema) => {
-            attestation_schema
-        }
-        Err(e) => {
-            log::error!("Failed to get attestation details: {}", e);
-            return Err(err_custom_create!(
-                "Failed to get attestation details: {}",
-                e
-            ));
-        }
-    };
-
+    let attestation_schema =
+        match get_schema_details(web3, attestation.schema, schema_contract.address).await {
+            Ok(attestation_schema) => attestation_schema,
+            Err(e) => {
+                log::error!("Failed to get attestation details: {}", e);
+                return Err(err_custom_create!(
+                    "Failed to get attestation details: {}",
+                    e
+                ));
+            }
+        };
 
     log::info!("Querying schema contract: {:#x}", schema_contract.address);
 
+    println!(
+        "attestation: {}",
+        serde_json::to_string_pretty(&attestation)
+            .map_err(|e| err_custom_create!("Failed to serialize attestation details: {}", e))?
+    );
 
-    println!("attestation: {}", serde_json::to_string_pretty(&attestation).map_err(
-        |e| err_custom_create!("Failed to serialize attestation details: {}", e)
-    )?);
+    println!(
+        "schema: {}",
+        serde_json::to_string_pretty(&attestation_schema)
+            .map_err(|e| err_custom_create!("Failed to serialize attestation details: {}", e))?
+    );
 
-    println!("schema: {}", serde_json::to_string_pretty(&attestation_schema).map_err(
-        |e| err_custom_create!("Failed to serialize attestation details: {}", e)
-    )?);
-
-    let items = attestation_schema.schema.split(",").into_iter().collect::<Vec<&str>>();
+    let items = attestation_schema
+        .schema
+        .split(",")
+        .into_iter()
+        .collect::<Vec<&str>>();
     log::debug!("There are {} items in the schema", items.len());
     let mut param_types = Vec::new();
     let mut param_names = Vec::new();
@@ -140,23 +127,19 @@ pub async fn check_attestation_local(
         let item_name = items2[1].trim();
 
         log::debug!("Item name: {}, Item type: {}", item_name, item_type);
-        let param_type = ethabi::param_type::Reader::read(item_type).map_err(
-            |e| err_custom_create!("Failed to read param type: {}", e)
-        )?;
+        let param_type = ethabi::param_type::Reader::read(item_type)
+            .map_err(|e| err_custom_create!("Failed to read param type: {}", e))?;
         param_types.push(param_type);
         param_names.push(item_name);
     }
 
-    let decoded_tokens = ethabi::decode(&param_types, &attestation.data.0).map_err(
-        |e| err_custom_create!("Failed to decode attestation data: {}", e)
-    )?;
+    let decoded_tokens = ethabi::decode(&param_types, &attestation.data.0)
+        .map_err(|e| err_custom_create!("Failed to decode attestation data: {}", e))?;
 
     for (token, token_name) in decoded_tokens.iter().zip(param_names.iter()) {
         println!("Token {}: {}", token_name, token);
     }
     //println!(attestation_schema.schema);
-
-
 
     Ok(())
 }
