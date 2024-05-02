@@ -74,3 +74,4 @@ cargo run -- account-balance --interval 2.0 -c polygon -a 0x75be52afd54a13b6c984
 
 http://deposit.dev.golem.network:15555/erc20/api/attestation/sepolia/0xeb9b088871155d0ae32f382de5a42d0a64e946f512b722698f4ae6b32164f92d
 http://deposit.dev.golem.network:15555/erc20/api/attestation/sepolia/0xc8b0ceee393cdcf313945d20b3bd45a01b0ccf2484309b669da2d4da9266b4d5
+http://deposit.dev.golem.network:15555/erc20/api/attestation/base/0xc0f18976a498f7287562492cca4a145108e83e3606e020f10653afd3511656ef

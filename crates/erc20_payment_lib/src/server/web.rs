@@ -1383,7 +1383,22 @@ pub async fn check_attestation(
         decoded_items.push(AttestationItemInfo {
             name: token_name.to_string(),
             typ: token_type.to_string(),
-            value: token.to_string(),
+            value: match token {
+                ethabi::Token::Address(addr) => format!("{:#x}", addr),
+                ethabi::Token::FixedBytes(bytes) => hex::encode(bytes),
+                ethabi::Token::Int(int) => format!("{:#x}", int),
+                ethabi::Token::Uint(uint) => format!("{:#x}", uint),
+                ethabi::Token::Bool(b) => {
+                    if *b {
+                        "true".to_string()
+                    } else {
+                        "false".to_string()
+                    }
+                }
+                ethabi::Token::String(s) => s.to_string(),
+                ethabi::Token::Bytes(bytes) => hex::encode(bytes),
+                _ => token.to_string(),
+            },
         });
     }
 
