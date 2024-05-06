@@ -1229,7 +1229,7 @@ struct AttestationItemInfo {
     name: String,
     #[serde(rename = "type")]
     typ: String,
-    value: String,
+    value: serde_json::Value,
 }
 
 #[derive(Debug, Serialize)]
@@ -1240,6 +1240,41 @@ pub struct AttestationCheckResult {
     attestation: Attestation,
     schema: AttestationSchema,
     params: Vec<AttestationItemInfo>,
+}
+
+fn ethabi_token_to_json(token: &ethabi::Token) -> serde_json::Value {
+    match token {
+        ethabi::Token::Address(addr) => serde_json::Value::String(format!("{:#x}", addr)),
+        ethabi::Token::FixedBytes(bytes) => {
+            serde_json::Value::String(format!("0x{}", hex::encode(bytes)))
+        }
+        ethabi::Token::Int(int) => {
+            if int <= &U256::from(2147483647) {
+                serde_json::Value::Number(serde_json::Number::from(int.as_u32()))
+            } else {
+                serde_json::Value::String(format!("{}", int))
+            }
+        }
+        ethabi::Token::Uint(uint) => {
+            if uint <= &U256::from(2147483647) {
+                serde_json::Value::Number(serde_json::Number::from(uint.as_u32()))
+            } else {
+                serde_json::Value::String(format!("{}", uint))
+            }
+        }
+        ethabi::Token::Bool(b) => serde_json::Value::Bool(*b),
+        ethabi::Token::String(s) => serde_json::Value::String(s.clone()),
+        ethabi::Token::Bytes(bytes) => {
+            serde_json::Value::String(format!("0x{}", hex::encode(bytes)))
+        }
+        ethabi::Token::Array(vec) | ethabi::Token::FixedArray(vec) | ethabi::Token::Tuple(vec) => {
+            serde_json::Value::Array(
+                vec.iter()
+                    .map(ethabi_token_to_json)
+                    .collect::<Vec<serde_json::Value>>(),
+            )
+        }
+    }
 }
 
 pub async fn check_attestation(
@@ -1383,22 +1418,7 @@ pub async fn check_attestation(
         decoded_items.push(AttestationItemInfo {
             name: token_name.to_string(),
             typ: token_type.to_string(),
-            value: match token {
-                ethabi::Token::Address(addr) => format!("{:#x}", addr),
-                ethabi::Token::FixedBytes(bytes) => hex::encode(bytes),
-                ethabi::Token::Int(int) => format!("{:#x}", int),
-                ethabi::Token::Uint(uint) => format!("{:#x}", uint),
-                ethabi::Token::Bool(b) => {
-                    if *b {
-                        "true".to_string()
-                    } else {
-                        "false".to_string()
-                    }
-                }
-                ethabi::Token::String(s) => s.to_string(),
-                ethabi::Token::Bytes(bytes) => hex::encode(bytes),
-                _ => token.to_string(),
-            },
+            value: ethabi_token_to_json(token),
         });
     }
 
