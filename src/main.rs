@@ -464,6 +464,9 @@ async fn main_internal() -> Result<(), PaymentError> {
             for key in res.1.iter().enumerate() {
                 println!("# ETH_ADDRESS_{}: {:#x}", key.0, key.1);
             }
+            for key in res.0.iter().enumerate() {
+                println!("# ETH_PRIVATE_KEY_{}: {}", key.0, key.1);
+            }
             println!("ETH_PRIVATE_KEYS={}", res.0.join(","));
         }
         PaymentCommands::Transfer {
