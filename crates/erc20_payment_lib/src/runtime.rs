@@ -1518,7 +1518,6 @@ pub async fn make_deposit(
             deposit_spender: opt.spender,
             deposit_amount: amount,
             deposit_fee_amount: fee_amount,
-            deposit_fee_percent: 0,
             deposit_timestamp: opt.timestamp,
         },
     )?;

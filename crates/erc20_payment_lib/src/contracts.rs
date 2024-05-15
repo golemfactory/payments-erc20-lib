@@ -182,7 +182,6 @@ pub struct CreateDepositArgs {
     pub deposit_spender: Address,
     pub deposit_amount: U256,
     pub deposit_fee_amount: U256,
-    pub deposit_fee_percent: i64,
     pub deposit_timestamp: u64,
 }
 
@@ -197,7 +196,6 @@ pub fn encode_create_deposit(
             deposit_args.deposit_spender,
             deposit_args.deposit_amount,
             deposit_args.deposit_fee_amount,
-            deposit_args.deposit_fee_percent,
             deposit_args.deposit_timestamp,
         ),
     )
