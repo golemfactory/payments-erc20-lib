@@ -476,7 +476,9 @@ impl PaymentRuntime {
             Some(raw_event_sender.clone()),
         )?;
         payment_setup.use_transfer_for_single_payment = options.use_transfer_for_single_payment;
-        payment_setup.extra_options_for_testing = payment_runtime_args.extra_testing.clone();
+        payment_setup
+            .extra_options_for_testing
+            .clone_from(&payment_runtime_args.extra_testing);
         payment_setup.contract_use_direct_method = options.contract_use_direct_method;
         payment_setup.contract_use_unpacked_method = options.contract_use_unpacked_method;
         log::debug!("Starting payment engine: {:#?}", payment_setup);
@@ -672,6 +674,26 @@ impl PaymentRuntime {
             sender,
         )
         .await
+    }
+
+    pub async fn validate_deposit(
+        &self,
+        chain_name: String,
+        deposit_id: DepositId,
+        validate_args: BTreeMap<String, String>,
+    ) -> Result<ValidateDepositResult, PaymentError> {
+        let chain_cfg = self
+            .config
+            .chain
+            .get(&chain_name)
+            .ok_or(err_custom_create!(
+                "Chain {} not found in config file",
+                chain_name
+            ))?;
+
+        let web3 = self.setup.get_provider(chain_cfg.chain_id)?;
+
+        validate_deposit(web3, deposit_id, validate_args).await
     }
 
     pub async fn deposit_details(
@@ -1261,6 +1283,29 @@ pub async fn deposit_details(
     Ok(result)
 }
 
+pub enum ValidateDepositResult {
+    Valid,
+    Invalid(String),
+}
+
+pub async fn validate_deposit(
+    web3: Arc<Web3RpcPool>,
+    deposit_id: DepositId,
+    validate_args: BTreeMap<String, String>,
+) -> Result<ValidateDepositResult, PaymentError> {
+    let block_info = get_latest_block_info(web3.clone()).await?;
+
+    log::warn!("Validating deposit: {:?}", validate_args);
+    crate::eth::validate_deposit_eth(
+        web3.clone(),
+        deposit_id.deposit_id,
+        deposit_id.lock_address,
+        validate_args,
+        Some(block_info.block_number),
+    )
+    .await
+}
+
 pub struct CloseDepositOptionsInt {
     pub skip_deposit_check: bool,
     pub deposit_id: DepositId,
@@ -1518,7 +1563,6 @@ pub async fn make_deposit(
             deposit_spender: opt.spender,
             deposit_amount: amount,
             deposit_fee_amount: fee_amount,
-            deposit_fee_percent: 0,
             deposit_timestamp: opt.timestamp,
         },
     )?;

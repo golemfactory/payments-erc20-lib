@@ -166,7 +166,7 @@ pub async fn update_approve_result(
             let mut allowance = get_allowance_by_tx(&mut *db_transaction, tx.id)
                 .await
                 .map_err(err_from!())?;
-            allowance.fee_paid = tx.fee_paid.clone();
+            allowance.fee_paid.clone_from(&tx.fee_paid);
             update_allowance(&mut *db_transaction, &allowance)
                 .await
                 .map_err(err_from!())?;
