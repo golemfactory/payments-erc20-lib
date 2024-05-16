@@ -17,7 +17,7 @@ path = "src/main.rs"
 name = "erc20_processor"
 description = "Payment processor for ERC20 tokens"
 authors = ["Sieciech Czajka <sieciech.czajka@golem.network>"]
-version = "0.4.3"
+version = "0.4.4"
 edition = "2021"
 license = "MIT"
 
@@ -77,11 +77,11 @@ web3 = { version = "0.19", default-features = false, features = [
     "http-rustls-tls",
 ] }
 # local dependencies
-erc20_rpc_pool = { path = "crates/erc20_rpc_pool", version = "0.4.0" }
-erc20_payment_lib = { path = "crates/erc20_payment_lib", version = "0.4.0" }
-erc20_payment_lib_common = { path = "crates/erc20_payment_lib_common", version = "0.4.0" }
-erc20_payment_lib_extra = { path = "crates/erc20_payment_lib_extra", version = "0.4.0" }
-web3_test_proxy_client = { path = "crates/web3_test_proxy_client", version = "0.4.0" }
+erc20_rpc_pool = { path = "crates/erc20_rpc_pool", version = "0.4.4" }
+erc20_payment_lib = { path = "crates/erc20_payment_lib", version = "0.4.4" }
+erc20_payment_lib_common = { path = "crates/erc20_payment_lib_common", version = "0.4.4" }
+erc20_payment_lib_extra = { path = "crates/erc20_payment_lib_extra", version = "0.4.4" }
+web3_test_proxy_client = { path = "crates/web3_test_proxy_client", version = "0.4.4" }
 
 [dependencies]
 actix-cors = { workspace = true }
