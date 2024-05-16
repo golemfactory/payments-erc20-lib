@@ -119,7 +119,7 @@ pub async fn deposit_details_local(
                     "Invalid parameter format: value is empty"
                 ));
             }
-            if parameters.get(&name).is_some() {
+            if parameters.contains_key(&name) {
                 return Err(err_custom_create!(
                     "Invalid parameter format: parameter {} is duplicated",
                     name

@@ -476,7 +476,9 @@ impl PaymentRuntime {
             Some(raw_event_sender.clone()),
         )?;
         payment_setup.use_transfer_for_single_payment = options.use_transfer_for_single_payment;
-        payment_setup.extra_options_for_testing = payment_runtime_args.extra_testing.clone();
+        payment_setup
+            .extra_options_for_testing
+            .clone_from(&payment_runtime_args.extra_testing);
         payment_setup.contract_use_direct_method = options.contract_use_direct_method;
         payment_setup.contract_use_unpacked_method = options.contract_use_unpacked_method;
         log::debug!("Starting payment engine: {:#?}", payment_setup);
