@@ -182,7 +182,6 @@ pub struct CreateDepositArgs {
     pub deposit_spender: Address,
     pub deposit_amount: U256,
     pub deposit_fee_amount: U256,
-    pub deposit_fee_percent: i64,
     pub deposit_timestamp: u64,
 }
 
@@ -197,7 +196,6 @@ pub fn encode_create_deposit(
             deposit_args.deposit_spender,
             deposit_args.deposit_amount,
             deposit_args.deposit_fee_amount,
-            deposit_args.deposit_fee_percent,
             deposit_args.deposit_timestamp,
         ),
     )
@@ -228,4 +226,23 @@ pub fn encode_payout_single_and_close(
 
 pub fn encode_get_deposit_details(id: U256) -> Result<Vec<u8>, web3::ethabi::Error> {
     contract_encode(&LOCK_CONTRACT_TEMPLATE, "getDeposit", (id,))
+}
+
+pub fn encode_get_validate_deposit_signature() -> Result<Vec<u8>, web3::ethabi::Error> {
+    contract_encode(&LOCK_CONTRACT_TEMPLATE, "getValidateDepositSignature", ())
+}
+
+pub fn encode_validate_contract(
+    params: Vec<ethabi::Param>,
+    values: Vec<ethabi::Token>,
+) -> Result<Vec<u8>, web3::ethabi::Error> {
+    #[allow(deprecated)]
+    let fun = ethabi::Function {
+        name: "validateDeposit".to_string(),
+        inputs: params,
+        outputs: vec![],
+        constant: None,
+        state_mutability: ethabi::StateMutability::default(),
+    };
+    fun.encode_input(&values)
 }

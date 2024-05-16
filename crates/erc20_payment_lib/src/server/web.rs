@@ -562,7 +562,7 @@ pub async fn transactions_feed(data: Data<Box<ServerData>>, req: HttpRequest) ->
     let current_tx = data.shared_state.lock().unwrap().current_tx_info.clone();
     for tx in txs.iter_mut() {
         if let Some(tx_info) = current_tx.get(&tx.id) {
-            tx.engine_error = tx_info.error.clone();
+            tx.engine_error.clone_from(&tx_info.error);
             tx.engine_message = Some(tx_info.message.clone());
         }
     }

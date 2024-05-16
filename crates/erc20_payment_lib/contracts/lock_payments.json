@@ -11,6 +11,121 @@
         "type": "constructor"
     },
     {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            }
+        ],
+        "name": "DepositClosed",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            }
+        ],
+        "name": "DepositCreated",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            }
+        ],
+        "name": "DepositExtended",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            }
+        ],
+        "name": "DepositTerminated",
+        "type": "event"
+    },
+    {
+        "inputs": [],
+        "name": "CONTRACT_ID",
+        "outputs": [
+            {
+                "internalType": "uint64",
+                "name": "",
+                "type": "uint64"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "CONTRACT_ID_AND_VERSION",
+        "outputs": [
+            {
+                "internalType": "uint64",
+                "name": "",
+                "type": "uint64"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "CONTRACT_VERSION",
+        "outputs": [
+            {
+                "internalType": "uint64",
+                "name": "",
+                "type": "uint64"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "GLM",
         "outputs": [
@@ -55,13 +170,8 @@
             },
             {
                 "internalType": "uint128",
-                "name": "constFeeAmount",
+                "name": "flatFeeAmount",
                 "type": "uint128"
-            },
-            {
-                "internalType": "int64",
-                "name": "percentFee",
-                "type": "int64"
             },
             {
                 "internalType": "uint64",
@@ -205,12 +315,12 @@
             },
             {
                 "internalType": "uint128",
-                "name": "extraAmount",
+                "name": "additionalAmount",
                 "type": "uint128"
             },
             {
                 "internalType": "uint128",
-                "name": "extraFee",
+                "name": "additionalFlatFee",
                 "type": "uint128"
             },
             {
@@ -241,25 +351,6 @@
             }
         ],
         "stateMutability": "pure",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
-            }
-        ],
-        "name": "funds",
-        "outputs": [
-            {
-                "internalType": "uint128",
-                "name": "",
-                "type": "uint128"
-            }
-        ],
-        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -300,17 +391,12 @@
                         "type": "uint128"
                     },
                     {
-                        "internalType": "uint128",
-                        "name": "feeAmount",
-                        "type": "uint128"
-                    },
-                    {
                         "internalType": "uint64",
                         "name": "validTo",
                         "type": "uint64"
                     }
                 ],
-                "internalType": "struct DepositView",
+                "internalType": "struct ILockPayment.DepositView",
                 "name": "",
                 "type": "tuple"
             }
@@ -361,17 +447,12 @@
                         "type": "uint128"
                     },
                     {
-                        "internalType": "uint128",
-                        "name": "feeAmount",
-                        "type": "uint128"
-                    },
-                    {
                         "internalType": "uint64",
                         "name": "validTo",
                         "type": "uint64"
                     }
                 ],
-                "internalType": "struct DepositView",
+                "internalType": "struct ILockPayment.DepositView",
                 "name": "",
                 "type": "tuple"
             }
@@ -380,59 +461,16 @@
         "type": "function"
     },
     {
-        "inputs": [
-            {
-                "internalType": "uint64",
-                "name": "nonce",
-                "type": "uint64"
-            }
-        ],
-        "name": "getMyDeposit",
+        "inputs": [],
+        "name": "getValidateDepositSignature",
         "outputs": [
             {
-                "components": [
-                    {
-                        "internalType": "uint256",
-                        "name": "id",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint64",
-                        "name": "nonce",
-                        "type": "uint64"
-                    },
-                    {
-                        "internalType": "address",
-                        "name": "funder",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "address",
-                        "name": "spender",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "uint128",
-                        "name": "amount",
-                        "type": "uint128"
-                    },
-                    {
-                        "internalType": "uint128",
-                        "name": "feeAmount",
-                        "type": "uint128"
-                    },
-                    {
-                        "internalType": "uint64",
-                        "name": "validTo",
-                        "type": "uint64"
-                    }
-                ],
-                "internalType": "struct DepositView",
+                "internalType": "string",
                 "name": "",
-                "type": "tuple"
+                "type": "string"
             }
         ],
-        "stateMutability": "view",
+        "stateMutability": "pure",
         "type": "function"
     },
     {
@@ -508,6 +546,30 @@
         "name": "terminateDeposit",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint128",
+                "name": "flatFeeAmount",
+                "type": "uint128"
+            }
+        ],
+        "name": "validateDeposit",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     }
 ]
