@@ -9,6 +9,15 @@ use web3::types::U256;
 pub fn datetime_from_u256_timestamp(timestamp: U256) -> Option<DateTime<Utc>> {
     DateTime::from_timestamp(timestamp.as_u64() as i64, 0)
 }
+
+pub fn datetime_from_u256_with_option(timestamp: U256) -> Option<DateTime<Utc>> {
+    if timestamp.is_zero() {
+        None
+    } else {
+        datetime_from_u256_timestamp(timestamp)
+    }
+}
+
 pub fn get_env_bool_value(env_name: &str) -> bool {
     env::var(env_name)
         .map(|v| {

@@ -2,7 +2,7 @@ mod actions;
 mod options;
 mod stats;
 
-use crate::options::{DepositCommands, PaymentCommands, PaymentOptions};
+use crate::options::{AttestationCommands, DepositCommands, PaymentCommands, PaymentOptions};
 use actix_web::Scope;
 use actix_web::{web, App, HttpServer};
 use csv::ReaderBuilder;
@@ -25,6 +25,7 @@ use erc20_payment_lib::{
 use std::env;
 use std::str::FromStr;
 
+use crate::actions::attestation::check::check_attestation_local;
 use crate::actions::check_address_name;
 use crate::actions::check_rpc::check_rpc_local;
 use crate::actions::deposit::close::close_deposit_local;
@@ -85,6 +86,9 @@ async fn main_internal() -> Result<(), PaymentError> {
         PaymentCommands::DecryptKeyStore { .. } => {}
         PaymentCommands::Cleanup { .. } => {}
         PaymentCommands::ShowConfig { .. } => {}
+        PaymentCommands::Attestation { .. } => {
+            private_key_load_needed = false;
+        }
     }
 
     let (private_keys, public_addrs) = if private_key_load_needed {
@@ -412,6 +416,11 @@ async fn main_internal() -> Result<(), PaymentError> {
             )
             .await?;
         }
+        PaymentCommands::Attestation { attest } => match attest {
+            AttestationCommands::Check { options } => {
+                check_attestation_local(conn.clone().unwrap(), options, config).await?;
+            }
+        },
         PaymentCommands::Deposit { deposit } => match deposit {
             DepositCommands::Create {
                 make_deposit_options,

@@ -67,3 +67,11 @@ Be nicer to endpoint rate limit every 2 seconds
 ```
 cargo run -- account-balance --interval 2.0 -c polygon -a 0x75be52afd54a13b6c98490b4db495aa79b609d58,0x7caac644722316101807e0d55f838f7851a97031,0x52a258ed593c793251a89bfd36cae158ee9fc4f8,0x04e2dc96afecdf72221882e1cee039cab4d443e0,0xa32a0edc623d86e623f58e7c4174023a80a67ddf,0x7cb53b925a79fb15c348fcfd9abcf2287854d33a,0x8cf88c473b6cb40b8d37cdd93e6c8118c14a6e60,0xa96d3f3e177687fb0b5f990d5c4000923b49430b,0x92fb36230b50a87a39ba3237c996caf5a39b230b,0x0c4d7a995aa9846ef25e1a347a8711c8b534b5a6,0x698076ae39e7e44bcd2bbe15f0486c8d44bb4e6f
 ```
+
+
+# Example attestation
+
+
+http://deposit.dev.golem.network:15555/erc20/api/attestation/sepolia/0xeb9b088871155d0ae32f382de5a42d0a64e946f512b722698f4ae6b32164f92d
+http://deposit.dev.golem.network:15555/erc20/api/attestation/sepolia/0xc8b0ceee393cdcf313945d20b3bd45a01b0ccf2484309b669da2d4da9266b4d5
+http://deposit.dev.golem.network:15555/erc20/api/attestation/base/0xc0f18976a498f7287562492cca4a145108e83e3606e020f10653afd3511656ef

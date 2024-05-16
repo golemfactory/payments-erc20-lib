@@ -97,6 +97,18 @@ pub struct DistributorContractSettings {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
+pub struct EasContractSettings {
+    pub address: Address,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
+pub struct EasSchemaRegistrySettings {
+    pub address: Address,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct FaucetClientSettings {
     pub max_eth_allowed: Decimal,
     pub faucet_srv: String,
@@ -135,6 +147,8 @@ pub struct Chain {
     pub mint_contract: Option<MintContractSettings>,
     pub lock_contract: Option<LockContractSettings>,
     pub distributor_contract: Option<DistributorContractSettings>,
+    pub attestation_contract: Option<EasContractSettings>,
+    pub schema_registry_contract: Option<EasSchemaRegistrySettings>,
     pub faucet_client: Option<FaucetClientSettings>,
     pub transaction_timeout: u64,
     pub confirmation_blocks: u64,

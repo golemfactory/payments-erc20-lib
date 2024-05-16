@@ -5,8 +5,9 @@ use crate::error::PaymentError;
 use std::str::FromStr;
 use web3::contract::tokens::Tokenize;
 use web3::contract::Contract;
+
 use web3::transports::Http;
-use web3::types::{Address, U256};
+use web3::types::{Address, H256, U256};
 use web3::{ethabi, Transport, Web3};
 
 // todo remove DUMMY_RPC_PROVIDER and use ABI instead
@@ -28,6 +29,10 @@ lazy_static! {
         prepare_contract_template(include_bytes!("../contracts/lock_payments.json")).unwrap();
     pub static ref DISTRIBUTOR_CONTRACT_TEMPLATE: Contract<Http> =
         prepare_contract_template(include_bytes!("../contracts/distributor.json")).unwrap();
+    pub static ref EAS_CONTRACT_TEMPLATE: Contract<Http> =
+        prepare_contract_template(include_bytes!("../contracts/EAS-main.json")).unwrap();
+    pub static ref SCHEMA_REGISTRY_TEMPLATE: Contract<Http> =
+        prepare_contract_template(include_bytes!("../contracts/EAS-SchemaRegistry.json")).unwrap();
 }
 
 pub fn prepare_contract_template(json_abi: &[u8]) -> Result<Contract<Http>, PaymentError> {
@@ -54,6 +59,14 @@ where
         .abi()
         .function(func)
         .and_then(|function| function.encode_input(&params.into_tokens()))
+}
+
+pub fn encode_get_attestation(uid: H256) -> Result<Vec<u8>, web3::ethabi::Error> {
+    contract_encode(&EAS_CONTRACT_TEMPLATE, "getAttestation", (uid,))
+}
+
+pub fn encode_get_schema(uid: H256) -> Result<Vec<u8>, web3::ethabi::Error> {
+    contract_encode(&SCHEMA_REGISTRY_TEMPLATE, "getSchema", (uid,))
 }
 
 pub fn encode_erc20_balance_of(address: Address) -> Result<Vec<u8>, web3::ethabi::Error> {

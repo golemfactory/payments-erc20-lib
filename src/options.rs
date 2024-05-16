@@ -1,5 +1,6 @@
 use std::{fmt::Debug, path::PathBuf};
 
+use crate::actions::attestation::check::AttestationCheckOptions;
 use crate::actions::deposit::close::CloseDepositOptions;
 use crate::actions::deposit::create::CreateDepositOptions;
 use crate::actions::deposit::details::CheckDepositOptions;
@@ -399,6 +400,15 @@ pub struct CleanupOptions {
 }
 
 #[derive(StructOpt)]
+#[structopt(about = "Attestation commands")]
+pub enum AttestationCommands {
+    Check {
+        #[structopt(flatten)]
+        options: AttestationCheckOptions,
+    },
+}
+
+#[derive(StructOpt)]
 #[structopt(about = "Commands for deposit management")]
 pub enum DepositCommands {
     Create {
@@ -446,6 +456,10 @@ pub enum PaymentCommands {
     MintTestTokens {
         #[structopt(flatten)]
         mint_test_tokens_options: MintTestTokensOptions,
+    },
+    Attestation {
+        #[structopt(flatten)]
+        attest: AttestationCommands,
     },
     Deposit {
         #[structopt(flatten)]

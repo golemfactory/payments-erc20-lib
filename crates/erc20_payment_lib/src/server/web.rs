@@ -1,10 +1,13 @@
-use crate::eth::get_balance;
+use crate::eth::{
+    get_attestation_details, get_balance, get_schema_details, Attestation, AttestationSchema,
+};
 use crate::runtime::{PaymentRuntime, SharedState, TransferArgs, TransferType};
 use crate::server::ws::event_stream_websocket_endpoint;
 use crate::setup::{ChainSetup, PaymentSetup};
 use crate::transaction::create_token_transfer;
 use actix_files::NamedFile;
 use actix_web::dev::{ServiceRequest, ServiceResponse};
+use actix_web::error::ErrorBadRequest;
 use actix_web::http::header::HeaderValue;
 use actix_web::http::{header, StatusCode};
 use actix_web::web::Data;
@@ -23,7 +26,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
-use web3::types::{Address, BlockId, BlockNumber, U256};
+use web3::ethabi;
+use web3::types::{Address, BlockId, BlockNumber, H256, U256};
 
 pub struct ServerData {
     pub shared_state: Arc<std::sync::Mutex<SharedState>>,
@@ -1220,6 +1224,213 @@ pub async fn faucet(data: Data<Box<ServerData>>, req: HttpRequest) -> impl Respo
     }))
 }
 
+#[derive(Debug, Serialize)]
+struct AttestationItemInfo {
+    name: String,
+    #[serde(rename = "type")]
+    typ: String,
+    value: serde_json::Value,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AttestationCheckResult {
+    chain_id: u64,
+    chain: String,
+    attestation: Attestation,
+    schema: AttestationSchema,
+    params: Vec<AttestationItemInfo>,
+}
+
+fn ethabi_token_to_json(token: &ethabi::Token) -> serde_json::Value {
+    match token {
+        ethabi::Token::Address(addr) => serde_json::Value::String(format!("{:#x}", addr)),
+        ethabi::Token::FixedBytes(bytes) => {
+            serde_json::Value::String(format!("0x{}", hex::encode(bytes)))
+        }
+        ethabi::Token::Int(int) => {
+            if int <= &U256::from(2147483647) {
+                serde_json::Value::Number(serde_json::Number::from(int.as_u32()))
+            } else {
+                serde_json::Value::String(format!("{}", int))
+            }
+        }
+        ethabi::Token::Uint(uint) => {
+            if uint <= &U256::from(2147483647) {
+                serde_json::Value::Number(serde_json::Number::from(uint.as_u32()))
+            } else {
+                serde_json::Value::String(format!("{}", uint))
+            }
+        }
+        ethabi::Token::Bool(b) => serde_json::Value::Bool(*b),
+        ethabi::Token::String(s) => serde_json::Value::String(s.clone()),
+        ethabi::Token::Bytes(bytes) => {
+            serde_json::Value::String(format!("0x{}", hex::encode(bytes)))
+        }
+        ethabi::Token::Array(vec) | ethabi::Token::FixedArray(vec) | ethabi::Token::Tuple(vec) => {
+            serde_json::Value::Array(
+                vec.iter()
+                    .map(ethabi_token_to_json)
+                    .collect::<Vec<serde_json::Value>>(),
+            )
+        }
+    }
+}
+
+pub async fn check_attestation(
+    data: Data<Box<ServerData>>,
+    req: HttpRequest,
+) -> actix_web::Result<web::Json<AttestationCheckResult>> {
+    let attestation_uid = req.match_info().get("uid").unwrap_or("");
+    let chain_name = req.match_info().get("chain").unwrap_or("");
+    let chain: &ChainSetup = data
+        .payment_setup
+        .chain_setup
+        .iter()
+        .find(|(_, chain)| chain.network == chain_name)
+        .ok_or(actix_web::error::ErrorBadRequest(format!(
+            "No config found for network {}",
+            chain_name
+        )))?
+        .1;
+
+    let web3 = data
+        .payment_setup
+        .get_provider(chain.chain_id)
+        .map_err(|e| ErrorBadRequest(format!("Failed to get provider: {}", e)))?;
+
+    let decoded_bytes = match hex::decode(attestation_uid.replace("0x", "")) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            return Err(ErrorBadRequest(format!(
+                "Failed to decode attestation id: {}",
+                e
+            )));
+        }
+    };
+
+    let contract = chain
+        .eas_contract_settings
+        .clone()
+        .ok_or(ErrorBadRequest(format!(
+            "No contract settings found for chain {}",
+            chain_name
+        )))?;
+
+    let schema_contract = chain
+        .eas_schema_registry_settings
+        .clone()
+        .ok_or(ErrorBadRequest(format!(
+            "No schema contract settings found for chain {}",
+            chain_name
+        )))?;
+
+    let uid = ethabi::Bytes::from(decoded_bytes);
+
+    let uid = if uid.len() != 32 {
+        return Err(ErrorBadRequest(format!(
+            "Invalid attestation id length: {}, expected 32",
+            uid.len()
+        )));
+    } else {
+        H256::from_slice(uid.as_slice())
+    };
+    log::info!("Querying attestation contract: {:#x}", contract.address);
+
+    let attestation = match get_attestation_details(web3.clone(), uid, contract.address).await {
+        Ok(Some(attestation)) => attestation,
+        Ok(None) => {
+            return Err(ErrorBadRequest(format!(
+                "Attestation with uid: {:#x} not found on chain {}",
+                uid, chain_name
+            )));
+        }
+        Err(e) => {
+            log::error!("Failed to get attestation details: {}", e);
+            return Err(ErrorBadRequest(format!(
+                "Failed to get attestation details: {}",
+                e
+            )));
+        }
+    };
+
+    let attestation_schema =
+        match get_schema_details(web3, attestation.schema, schema_contract.address).await {
+            Ok(attestation_schema) => attestation_schema,
+            Err(e) => {
+                log::error!("Failed to get attestation details: {}", e);
+                return Err(ErrorBadRequest(format!(
+                    "Failed to get attestation details: {}",
+                    e
+                )));
+            }
+        };
+
+    log::info!("Querying schema contract: {:#x}", schema_contract.address);
+
+    println!(
+        "attestation: {}",
+        serde_json::to_string_pretty(&attestation).map_err(|e| ErrorBadRequest(format!(
+            "Failed to serialize attestation details: {}",
+            e
+        )))?
+    );
+
+    println!(
+        "schema: {}",
+        serde_json::to_string_pretty(&attestation_schema).map_err(|e| ErrorBadRequest(format!(
+            "Failed to serialize attestation details: {}",
+            e
+        )))?
+    );
+
+    let items = attestation_schema.schema.split(',').collect::<Vec<&str>>();
+    log::debug!("There are {} items in the schema", items.len());
+    let mut param_types = Vec::new();
+    let mut param_names = Vec::new();
+
+    for item in items {
+        let items2 = item.trim().split(' ').collect::<Vec<&str>>();
+        if items2.len() != 2 {
+            log::error!("Invalid item in schema: {}", item);
+            return Err(ErrorBadRequest(format!("Invalid item in schema: {}", item)));
+        }
+        let item_type = items2[0].trim();
+        let item_name = items2[1].trim();
+
+        log::debug!("Item name: {}, Item type: {}", item_name, item_type);
+        let param_type = ethabi::param_type::Reader::read(item_type)
+            .map_err(|e| ErrorBadRequest(format!("Failed to read param type: {}", e)))?;
+        param_types.push(param_type);
+        param_names.push(item_name);
+    }
+
+    let decoded_tokens = ethabi::decode(&param_types, &attestation.data.0)
+        .map_err(|e| ErrorBadRequest(format!("Failed to decode attestation data: {}", e)))?;
+
+    let mut decoded_items = Vec::new();
+    for ((token, token_name), token_type) in decoded_tokens
+        .iter()
+        .zip(param_names.iter())
+        .zip(param_types.iter())
+    {
+        println!("Token {}: {}", token_name, token);
+        decoded_items.push(AttestationItemInfo {
+            name: token_name.to_string(),
+            typ: token_type.to_string(),
+            value: ethabi_token_to_json(token),
+        });
+    }
+
+    Ok(web::Json(AttestationCheckResult {
+        chain_id: chain.chain_id as u64,
+        chain: chain_name.to_string(),
+        attestation,
+        schema: attestation_schema,
+        params: decoded_items,
+    }))
+}
+
 pub fn runtime_web_scope(
     scope: Scope,
     server_data: Data<Box<ServerData>>,
@@ -1231,6 +1442,10 @@ pub fn runtime_web_scope(
     let api_scope = Scope::new("/api");
     let mut api_scope = api_scope
         .app_data(server_data)
+        .route(
+            "/attestation/{chain}/{uid}",
+            web::get().to(check_attestation),
+        )
         .route("/allowances", web::get().to(allowances))
         .route("/balance/{account}/{chain}", web::get().to(account_balance))
         .route("/rpc_pool", web::get().to(rpc_pool))
