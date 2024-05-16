@@ -1,4 +1,8 @@
-use crate::contracts::{encode_erc20_allowance, encode_erc20_balance_of, encode_get_attestation, encode_get_deposit_details, encode_get_schema, encode_get_validate_deposit_signature, encode_validate_contract};
+use crate::contracts::{
+    encode_erc20_allowance, encode_erc20_balance_of, encode_get_attestation,
+    encode_get_deposit_details, encode_get_schema, encode_get_validate_deposit_signature,
+    encode_validate_contract,
+};
 use crate::error::*;
 use crate::runtime::ValidateDepositResult;
 use crate::{err_create, err_custom_create, err_from};

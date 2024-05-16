@@ -96,7 +96,7 @@ impl Web3RpcPool {
                     }
                     Ok(Err(e)) => match e {
                         web3::Error::Rpc(e) => {
-                            let proper = check_if_proper_rpc_error(e.to_string());
+                            let proper = check_if_proper_rpc_error(&e.to_string());
                             if proper {
                                 self.mark_rpc_success(idx, EthMethodCall::METHOD.to_string());
                                 if let Some(event_sender) =
