@@ -674,6 +674,26 @@ impl PaymentRuntime {
         .await
     }
 
+    pub async fn validate_deposit(
+        &self,
+        chain_name: String,
+        deposit_id: DepositId,
+        validate_args: BTreeMap<String, String>,
+    ) -> Result<ValidateDepositResult, PaymentError> {
+        let chain_cfg = self
+            .config
+            .chain
+            .get(&chain_name)
+            .ok_or(err_custom_create!(
+                "Chain {} not found in config file",
+                chain_name
+            ))?;
+
+        let web3 = self.setup.get_provider(chain_cfg.chain_id)?;
+
+        validate_deposit(web3, deposit_id, validate_args).await
+    }
+
     pub async fn deposit_details(
         &self,
         chain_name: String,
@@ -1259,6 +1279,29 @@ pub async fn deposit_details(
     }
 
     Ok(result)
+}
+
+pub enum ValidateDepositResult {
+    Valid,
+    Invalid(String),
+}
+
+pub async fn validate_deposit(
+    web3: Arc<Web3RpcPool>,
+    deposit_id: DepositId,
+    validate_args: BTreeMap<String, String>,
+) -> Result<ValidateDepositResult, PaymentError> {
+    let block_info = get_latest_block_info(web3.clone()).await?;
+
+    log::warn!("Validating deposit: {:?}", validate_args);
+    crate::eth::validate_deposit_eth(
+        web3.clone(),
+        deposit_id.deposit_id,
+        deposit_id.lock_address,
+        validate_args,
+        Some(block_info.block_number),
+    )
+    .await
 }
 
 pub struct CloseDepositOptionsInt {

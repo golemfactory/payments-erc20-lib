@@ -221,9 +221,15 @@ contract LockPayment is ILockPayment {
     }
 
     //validateDeposit - validate extra fields not covered by common validation
-    function validateDeposit(uint256 id, uint128 flatFeeAmount) public view {
+    function validateDeposit(uint256 id, uint128 flatFeeAmount) public view returns (string memory) {
         Deposit memory deposit = deposits[id];
-        require(flatFeeAmount == deposit.feeAmount, "flatFeeAmount == deposit.feeAmount");
+        if (deposit.spender == address(0)) {
+            return "failed due to wrong deposit id";
+        }
+        if (flatFeeAmount != deposit.feeAmount) {
+            return "failed due to flatFeeAmount mismatch";
+        }
+        return "valid";
     }
 
     function getValidateDepositSignature() public pure returns (string memory) {

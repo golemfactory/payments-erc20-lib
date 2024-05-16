@@ -1,16 +1,21 @@
 use crate::contracts::{
     encode_erc20_allowance, encode_erc20_balance_of, encode_get_deposit_details,
+    encode_get_validate_deposit_signature, encode_validate_contract,
 };
 use crate::error::*;
+use crate::runtime::ValidateDepositResult;
 use crate::{err_create, err_custom_create, err_from};
 use erc20_payment_lib_common::utils::{datetime_from_u256_timestamp, U256ConvExt};
 use erc20_rpc_pool::Web3RpcPool;
 use secp256k1::{PublicKey, SecretKey};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha3::Digest;
 use sha3::Keccak256;
+use std::collections::BTreeMap;
+use std::str::FromStr;
 use std::sync::Arc;
 use web3::ethabi;
+use web3::ethabi::ParamType;
 use web3::types::{Address, BlockId, BlockNumber, Bytes, CallRequest, U256, U64};
 
 #[derive(Clone, Debug, Serialize)]
@@ -29,9 +34,7 @@ pub struct DepositDetails {
     pub funder: Address,
     pub spender: Address,
     pub amount: String,
-    pub fee_amount: String,
     pub amount_decimal: rust_decimal::Decimal,
-    pub fee_amount_decimal: rust_decimal::Decimal,
     pub valid_to: chrono::DateTime<chrono::Utc>,
     pub current_block: u64,
     pub current_block_datetime: Option<chrono::DateTime<chrono::Utc>>,
@@ -43,17 +46,16 @@ pub struct DepositView {
     pub funder: Address,
     pub spender: Address,
     pub amount: u128,
-    pub fee_amount: u128,
     pub valid_to: u64,
 }
 
 impl DepositView {
     pub fn decode_from_bytes(bytes: &[u8]) -> Result<DepositView, PaymentError> {
-        if bytes.len() != 7 * 32 {
+        if bytes.len() != 6 * 32 {
             return Err(err_custom_create!(
                 "Invalid response length: {}, expected {}",
                 bytes.len(),
-                7 * 32
+                6 * 32
             ));
         }
 
@@ -63,7 +65,6 @@ impl DepositView {
                 ethabi::ParamType::Uint(64),
                 ethabi::ParamType::Address,
                 ethabi::ParamType::Address,
-                ethabi::ParamType::Uint(128),
                 ethabi::ParamType::Uint(128),
                 ethabi::ParamType::Uint(64),
             ],
@@ -82,8 +83,7 @@ impl DepositView {
             funder: decoded[2].clone().into_address().unwrap(),
             spender: decoded[3].clone().into_address().unwrap(),
             amount: decoded[4].clone().into_uint().unwrap().as_u128(),
-            fee_amount: decoded[5].clone().into_uint().unwrap().as_u128(),
-            valid_to: decoded[6].clone().into_uint().unwrap().as_u64(),
+            valid_to: decoded[5].clone().into_uint().unwrap().as_u64(),
         })
     }
 }
@@ -99,6 +99,170 @@ pub fn nonce_from_deposit_id(deposit_id: U256) -> u64 {
     let mut slice: [u8; 32] = [0; 32];
     deposit_id.to_big_endian(&mut slice);
     u64::from_be_bytes(slice[24..32].try_into().unwrap())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SignatureParam {
+    #[serde(rename = "type")]
+    pub typ: String,
+    pub name: String,
+}
+
+fn ethabi_decode_string_result(bytes: Bytes) -> Result<String, PaymentError> {
+    let decoded = ethabi::decode(
+        &[
+            ethabi::ParamType::String,
+        ],
+        &bytes.0,
+    )
+        .map_err(|err|err_custom_create!(
+            "Failed to decode deposit view from bytes, check if proper contract and contract method is called: {}",
+            err
+        ))?;
+
+    if decoded.len() != 1 {
+        return Err(err_custom_create!(
+            "Invalid response length: {}, expected {}",
+            decoded.len(),
+            1
+        ));
+    }
+    decoded[0]
+        .clone()
+        .into_string()
+        .ok_or_else(|| err_custom_create!("Failed to decode string from bytes"))
+}
+
+pub async fn validate_deposit_eth(
+    web3: Arc<Web3RpcPool>,
+    deposit_id: U256,
+    lock_contract_address: Address,
+    validate_args: BTreeMap<String, String>,
+    block_number: Option<u64>,
+) -> Result<ValidateDepositResult, PaymentError> {
+    let block_number = if let Some(block_number) = block_number {
+        log::debug!("Checking balance for block number {}", block_number);
+        block_number
+    } else {
+        web3.clone()
+            .eth_block_number()
+            .await
+            .map_err(err_from!())?
+            .as_u64()
+    };
+
+    let bytes = web3
+        .clone()
+        .eth_call(
+            CallRequest {
+                to: Some(lock_contract_address),
+                data: Some(encode_get_validate_deposit_signature().unwrap().into()),
+                ..Default::default()
+            },
+            None,
+        )
+        .await
+        .map_err(err_from!())?;
+
+    let str = ethabi_decode_string_result(bytes)?;
+
+    let signature_params: Vec<SignatureParam> = serde_json::from_str(&str)
+        .map_err(|err| err_custom_create!("Failed to parse signature params: {}", err))?;
+
+    let mut matched_params: Vec<String> = Vec::new();
+    let mut function_params: Vec<ethabi::Param> = Vec::new();
+    let mut function_values: Vec<ethabi::Token> = Vec::new();
+    for signature_param in &signature_params {
+        if signature_param.name == "id" {
+            let new_param = ethabi::Param {
+                name: "id".to_string(),
+                kind: ParamType::Uint(256),
+                internal_type: None,
+            };
+            matched_params.push("id".to_string());
+            function_params.push(new_param);
+            function_values.push(ethabi::Token::Uint(deposit_id));
+        } else {
+            let param_name = signature_param.name.clone();
+            if let Some(param_value) = validate_args.get(&param_name) {
+                matched_params.push(param_name.to_string());
+
+                if signature_param.typ == "uint128" {
+                    let res_value = U256::from_dec_str(param_value);
+                    let value = match res_value {
+                        Ok(value) => value,
+                        Err(_) => U256::from_str(param_value).map_err(|err| {
+                            err_custom_create!(
+                                "Invalid value for parameter {}: {}",
+                                param_name,
+                                err
+                            )
+                        })?,
+                    };
+
+                    let new_param = ethabi::Param {
+                        name: param_name,
+                        kind: ParamType::Uint(128),
+                        internal_type: None,
+                    };
+                    let new_token = ethabi::Token::Uint(value);
+                    function_params.push(new_param);
+                    function_values.push(new_token);
+                } else {
+                    return Err(err_custom_create!(
+                        "Unsupported type for parameter {}: {}",
+                        param_name,
+                        signature_param.typ
+                    ));
+                }
+            } else {
+                return Err(err_custom_create!(
+                    "Missing required parameter: {}",
+                    signature_param.name
+                ));
+            }
+        }
+    }
+
+    for signature_param in &signature_params {
+        if !matched_params.contains(&signature_param.name) {
+            return Err(err_custom_create!(
+                "Missing required parameter: {}",
+                signature_param.name
+            ));
+        }
+    }
+
+    log::warn!("Matched params: {:?}", matched_params);
+    log::warn!("Function params: {:?}", function_params);
+    log::warn!("Function values: {:?}", function_values);
+
+    log::warn!("Signature params: {:?}", signature_params);
+
+    let res = web3
+        .eth_call(
+            CallRequest {
+                to: Some(lock_contract_address),
+                data: Some(
+                    encode_validate_contract(function_params, function_values)
+                        .unwrap()
+                        .into(),
+                ),
+                ..Default::default()
+            },
+            Some(BlockId::Number(BlockNumber::Number(U64::from(
+                block_number,
+            )))),
+        )
+        .await
+        .map_err(err_from!())?;
+
+    let str = ethabi_decode_string_result(res)?;
+    Ok(if str == "valid" {
+        ValidateDepositResult::Valid
+    } else {
+        ValidateDepositResult::Invalid(str)
+    })
 }
 
 pub async fn get_deposit_details(
@@ -135,7 +299,6 @@ pub async fn get_deposit_details(
     let deposit_view = DepositView::decode_from_bytes(&res.0)?;
 
     let amount_u256 = U256::from(deposit_view.amount);
-    let fee_amount_u256 = U256::from(deposit_view.fee_amount);
 
     let valid_to = chrono::DateTime::from_timestamp(
         deposit_view
@@ -152,10 +315,8 @@ pub async fn get_deposit_details(
         funder: deposit_view.funder,
         spender: deposit_view.spender,
         amount: amount_u256.to_string(),
-        fee_amount: fee_amount_u256.to_string(),
         current_block: block_number,
         amount_decimal: amount_u256.to_eth().map_err(err_from!())?,
-        fee_amount_decimal: fee_amount_u256.to_eth().map_err(err_from!())?,
         current_block_datetime: None,
         valid_to,
     })
