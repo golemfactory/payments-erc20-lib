@@ -124,7 +124,7 @@ contract LockPayment is ILockPayment {
         //check if id is not used
         uint256 id = idFromNonce(nonce);
         //this checks if deposit is not already created with this id
-        require(deposits[id].spender != address(0), "deposits[id].spender != address(0)");
+        require(deposits[id].spender == address(0), "deposits[id].spender == address(0)");
         require(amount > 0, "amount > 0");
         require(spender != address(0), "spender cannot be null address");
         require(msg.sender != spender, "spender cannot be funder");
