@@ -50,6 +50,7 @@ pub struct ChainSetup {
     pub priority_fee: U256,
     pub glm_address: Address,
     pub multi_contract_address: Option<Address>,
+    pub wrapper_contract_address: Option<Address>,
     pub lock_contract_address: Option<Address>,
     pub distribute_contract_address: Option<Address>,
     pub eas_contract_settings: Option<EasContractSettings>,
@@ -295,6 +296,11 @@ impl PaymentSetup {
                     multi_contract_address: chain_config
                         .1
                         .multi_contract
+                        .clone()
+                        .map(|m| m.address),
+                    wrapper_contract_address: chain_config
+                        .1
+                        .wrapper_contract
                         .clone()
                         .map(|m| m.address),
                     multi_contract_max_at_once: chain_config

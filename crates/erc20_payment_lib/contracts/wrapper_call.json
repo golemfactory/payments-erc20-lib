@@ -1,0 +1,203 @@
+[
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "externalContractAddress",
+                "type": "address"
+            },
+            {
+                "internalType": "bytes",
+                "name": "callData",
+                "type": "bytes"
+            }
+        ],
+        "name": "callWithDetails",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "components": [
+                            {
+                                "internalType": "uint256",
+                                "name": "number",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "timestamp",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "difficulty",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "gaslimit",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "address",
+                                "name": "coinbase",
+                                "type": "address"
+                            },
+                            {
+                                "internalType": "bytes32",
+                                "name": "blockhash",
+                                "type": "bytes32"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "basefee",
+                                "type": "uint256"
+                            }
+                        ],
+                        "internalType": "struct BlockDetails",
+                        "name": "details",
+                        "type": "tuple"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "result",
+                        "type": "bytes"
+                    }
+                ],
+                "internalType": "struct CallWithDetailsResult",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "detailsOnly",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "number",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "timestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "difficulty",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "gaslimit",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "address",
+                        "name": "coinbase",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "blockhash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "basefee",
+                        "type": "uint256"
+                    }
+                ],
+                "internalType": "struct BlockDetails",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "externalContractAddresses",
+                "type": "address[]"
+            },
+            {
+                "internalType": "bytes[]",
+                "name": "callDatas",
+                "type": "bytes[]"
+            }
+        ],
+        "name": "multiCallWithDetails",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "components": [
+                            {
+                                "internalType": "uint256",
+                                "name": "number",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "timestamp",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "difficulty",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "gaslimit",
+                                "type": "uint256"
+                            },
+                            {
+                                "internalType": "address",
+                                "name": "coinbase",
+                                "type": "address"
+                            },
+                            {
+                                "internalType": "bytes32",
+                                "name": "blockhash",
+                                "type": "bytes32"
+                            },
+                            {
+                                "internalType": "uint256",
+                                "name": "basefee",
+                                "type": "uint256"
+                            }
+                        ],
+                        "internalType": "struct BlockDetails",
+                        "name": "details",
+                        "type": "tuple"
+                    },
+                    {
+                        "internalType": "bytes[]",
+                        "name": "results",
+                        "type": "bytes[]"
+                    }
+                ],
+                "internalType": "struct MultiCallWithDetailsResult",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]

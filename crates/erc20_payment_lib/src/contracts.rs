@@ -25,6 +25,9 @@ lazy_static! {
     pub static ref ERC20_MULTI_CONTRACT_TEMPLATE: Contract<Http> = {
         prepare_contract_template(include_bytes!("../contracts/multi_transfer_erc20.json")).unwrap()
     };
+    pub static ref WRAPPER_CONTRACT_TEMPLATE: Contract<Http> = {
+        prepare_contract_template(include_bytes!("../contracts/wrapper_call.json")).unwrap()
+    };
     pub static ref LOCK_CONTRACT_TEMPLATE: Contract<Http> =
         prepare_contract_template(include_bytes!("../contracts/lock_payments.json")).unwrap();
     pub static ref DISTRIBUTOR_CONTRACT_TEMPLATE: Contract<Http> =
