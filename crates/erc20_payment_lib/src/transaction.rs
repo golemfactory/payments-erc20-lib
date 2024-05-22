@@ -459,6 +459,7 @@ pub async fn get_no_token_details(
         token_balance: get_token_balance(
             web3,
             glm_token,
+            None,
             Address::from_str(&web3_tx_dao.from_addr).map_err(err_from!())?,
             None,
         )
@@ -691,6 +692,7 @@ pub async fn send_transaction(
                                 token_balance: get_token_balance(
                                     web3,
                                     glm_token,
+                                    None,
                                     Address::from_str(&web3_tx_dao.from_addr)
                                         .map_err(err_from!())?,
                                     None,

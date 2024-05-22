@@ -89,6 +89,17 @@ pub fn encode_erc20_allowance(
     contract_encode(&ERC20_CONTRACT_TEMPLATE, "allowance", (owner, spender))
 }
 
+pub fn encode_call_with_details(
+    call_target_address: Address,
+    call_data: Vec<u8>,
+) -> Result<Vec<u8>, web3::ethabi::Error> {
+    contract_encode(
+        &WRAPPER_CONTRACT_TEMPLATE,
+        "callWithDetails",
+        (call_target_address, call_data),
+    )
+}
+
 pub fn encode_distribute(
     recipients: &[Address],
     amounts: &[U256],

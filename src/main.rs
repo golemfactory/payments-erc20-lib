@@ -528,6 +528,7 @@ async fn main_internal() -> Result<(), PaymentError> {
                         get_token_balance(
                             payment_setup.get_provider(chain_cfg.chain_id)?,
                             chain_cfg.token.address,
+                            chain_cfg.wrapper_contract.clone().map(|c| c.address),
                             public_addr,
                             None,
                         )

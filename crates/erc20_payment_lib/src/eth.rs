@@ -1,7 +1,7 @@
 use crate::contracts::{
-    encode_erc20_allowance, encode_erc20_balance_of, encode_get_attestation,
-    encode_get_deposit_details, encode_get_schema, encode_get_validate_deposit_signature,
-    encode_validate_contract,
+    encode_call_with_details, encode_erc20_allowance, encode_erc20_balance_of,
+    encode_get_attestation, encode_get_deposit_details, encode_get_schema,
+    encode_get_validate_deposit_signature, encode_validate_contract,
 };
 use crate::error::*;
 use crate::runtime::ValidateDepositResult;
@@ -459,6 +459,7 @@ pub async fn get_deposit_details(
 pub async fn get_balance(
     web3: Arc<Web3RpcPool>,
     token_address: Option<Address>,
+    call_with_details: Option<Address>,
     address: Address,
     check_gas: bool,
     block_number: Option<u64>,
@@ -489,6 +490,36 @@ pub async fn get_balance(
         )
     } else {
         None
+    };
+
+    if let Some(token_address) = token_address {
+        if let Some(call_with_details) = call_with_details {
+            let abi_encoded_get_balance = encode_erc20_balance_of(address).map_err(err_from!())?;
+
+            let call_data = encode_call_with_details(token_address, abi_encoded_get_balance)
+                .map_err(err_from!())?;
+            let res = web3
+                .clone()
+                .eth_call(
+                    CallRequest {
+                        from: None,
+                        to: Some(call_with_details),
+                        gas: None,
+                        gas_price: None,
+                        value: None,
+                        data: Some(Bytes::from(call_data)),
+                        transaction_type: None,
+                        access_list: None,
+                        max_fee_per_gas: None,
+                        max_priority_fee_per_gas: None,
+                    },
+                    None,
+                )
+                .await
+                .map_err(err_from!())?;
+
+            log::debug!("Token balance response: {:?}", res);
+        }
     };
 
     let token_balance = if let Some(token_address) = token_address {

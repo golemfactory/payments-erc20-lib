@@ -110,10 +110,16 @@ pub async fn account_balance(
             let web3 = web3.clone();
             async move {
                 log::debug!("Getting balance for account: {:#x}", job);
-                let balance =
-                    get_balance(web3, token, job, !account_balance_options.hide_gas, None)
-                        .await
-                        .unwrap();
+                let balance = get_balance(
+                    web3,
+                    token,
+                    None,
+                    job,
+                    !account_balance_options.hide_gas,
+                    None,
+                )
+                .await
+                .unwrap();
 
                 let gas_balance = balance.gas_balance.map(|b| b.to_string());
                 let token_balance = balance.token_balance.map(|b| b.to_string());

@@ -934,6 +934,7 @@ async fn account_balance(
     let balance = get_balance(
         chain.provider.clone(),
         Some(chain.glm_address),
+        chain.wrapper_contract_address,
         account,
         true,
         Some(block_number.as_u64()),

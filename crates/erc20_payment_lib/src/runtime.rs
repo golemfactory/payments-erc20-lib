@@ -733,7 +733,14 @@ impl PaymentRuntime {
 
         let web3 = self.setup.get_provider(chain_cfg.chain_id)?;
 
-        get_token_balance(web3, token_address, address, None).await
+        get_token_balance(
+            web3,
+            token_address,
+            chain_cfg.wrapper_contract.clone().map(|c| c.address),
+            address,
+            None,
+        )
+        .await
     }
 
     /// Force sources and enpoints check depending on input. If wait is set to false, it is nonblocking.
@@ -887,7 +894,15 @@ impl PaymentRuntime {
 
         let web3 = self.setup.get_provider(chain_cfg.chain_id)?;
 
-        let balance_result = crate::eth::get_balance(web3, None, address, true, None).await?;
+        let balance_result = crate::eth::get_balance(
+            web3,
+            None,
+            chain_cfg.wrapper_contract.clone().map(|c| c.address),
+            address,
+            true,
+            None,
+        )
+        .await?;
 
         let gas_balance = balance_result
             .gas_balance
@@ -1217,7 +1232,7 @@ pub async fn mint_golem_token(
         ));
         };
 
-        let token_balance = get_token_balance(web3.clone(), glm_address, from, None)
+        let token_balance = get_token_balance(web3.clone(), glm_address, None, from, None)
             .await?
             .to_eth_saturate();
 
@@ -1518,6 +1533,7 @@ pub async fn make_deposit(
         let token_balance = get_token_balance(
             web3.clone(),
             glm_address,
+            None,
             from,
             Some(block_info.block_number),
         )
@@ -1579,11 +1595,19 @@ pub async fn make_deposit(
 pub async fn get_token_balance(
     web3: Arc<Web3RpcPool>,
     token_address: Address,
+    call_with_details: Option<Address>,
     address: Address,
     block_number: Option<u64>,
 ) -> Result<U256, PaymentError> {
-    let balance_result =
-        crate::eth::get_balance(web3, Some(token_address), address, true, block_number).await?;
+    let balance_result = crate::eth::get_balance(
+        web3,
+        Some(token_address),
+        call_with_details,
+        address,
+        true,
+        block_number,
+    )
+    .await?;
 
     let token_balance = balance_result
         .token_balance
