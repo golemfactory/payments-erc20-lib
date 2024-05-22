@@ -140,16 +140,9 @@ pub async fn transaction_from_chain_and_into_db(
                 .clone()
                 .eth_call(
                     CallRequest {
-                        from: None,
                         to: Some(glm_address),
-                        gas: None,
-                        gas_price: None,
-                        value: None,
                         data: Some(web3::types::Bytes::from(call_data)),
-                        transaction_type: None,
-                        access_list: None,
-                        max_fee_per_gas: None,
-                        max_priority_fee_per_gas: None,
+                        ..Default::default()
                     },
                     Some(web3::types::BlockId::Number(BlockNumber::Number(
                         chain_tx_dao.block_number.into(),
