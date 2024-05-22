@@ -309,6 +309,7 @@ priority-fee = 30.111
 max-fee-per-gas = 500.0
 transaction-timeout = 100
 token = { address = "0x0B220b82F3eA3B7F6d9A1D8ab58930C064A2b5Bf", symbol = "GLM" }
+wrapper-contract = { address = "0x229727AcEE595CB3e0de042E7d5A7370EdED8f89" }
 lock-contract = { address = "0x633193F5524849C84368ADF39aFDB0EedFAf8B29" }
 multi-contract = { address = "0x50100d4faf5f3b09987dea36dc2eddd57a3e561b", max-at-once = 10 }
 attestation-contract = { address = "0x5E634ef5355f45A855d02D66eCD687b1502AF790" }
