@@ -212,7 +212,7 @@ currency-symbol = "tETH"
 priority-fee = 0.000001
 max-fee-per-gas = 20.0
 transaction-timeout = 100
-wrapper-contract = { address = "0xaDDfF0401d0F35a39EF199344F052eE3e5a73EE0" }
+wrapper-contract = { address = "0x9a553Ee4497765Ee1EE47091354B9cd58620E481" }
 token = { address = "0x8888888815bf4DB87e57B609A50f938311EEd068", symbol = "tGLM" }
 multi-contract = { address = "0xAaAAAaA00E1841A63342db7188abA84BDeE236c7", max-at-once = 10 }
 mint-contract = { address = "0xFACe100969FF47EB58d2CF603321B581A84bcEaC", max-glm-allowed = 400 }

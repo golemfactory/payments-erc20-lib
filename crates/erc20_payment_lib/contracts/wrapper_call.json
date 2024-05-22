@@ -32,31 +32,6 @@
                                 "internalType": "uint256",
                                 "name": "timestamp",
                                 "type": "uint256"
-                            },
-                            {
-                                "internalType": "uint256",
-                                "name": "difficulty",
-                                "type": "uint256"
-                            },
-                            {
-                                "internalType": "uint256",
-                                "name": "gaslimit",
-                                "type": "uint256"
-                            },
-                            {
-                                "internalType": "address",
-                                "name": "coinbase",
-                                "type": "address"
-                            },
-                            {
-                                "internalType": "bytes32",
-                                "name": "blockhash",
-                                "type": "bytes32"
-                            },
-                            {
-                                "internalType": "uint256",
-                                "name": "basefee",
-                                "type": "uint256"
                             }
                         ],
                         "internalType": "struct BlockDetails",
@@ -91,31 +66,6 @@
                     {
                         "internalType": "uint256",
                         "name": "timestamp",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "difficulty",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "gaslimit",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "address",
-                        "name": "coinbase",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "bytes32",
-                        "name": "blockhash",
-                        "type": "bytes32"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "basefee",
                         "type": "uint256"
                     }
                 ],
@@ -154,31 +104,6 @@
                             {
                                 "internalType": "uint256",
                                 "name": "timestamp",
-                                "type": "uint256"
-                            },
-                            {
-                                "internalType": "uint256",
-                                "name": "difficulty",
-                                "type": "uint256"
-                            },
-                            {
-                                "internalType": "uint256",
-                                "name": "gaslimit",
-                                "type": "uint256"
-                            },
-                            {
-                                "internalType": "address",
-                                "name": "coinbase",
-                                "type": "address"
-                            },
-                            {
-                                "internalType": "bytes32",
-                                "name": "blockhash",
-                                "type": "bytes32"
-                            },
-                            {
-                                "internalType": "uint256",
-                                "name": "basefee",
                                 "type": "uint256"
                             }
                         ],

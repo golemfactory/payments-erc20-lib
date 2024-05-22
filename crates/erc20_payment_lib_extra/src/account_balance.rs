@@ -102,6 +102,7 @@ pub async fn account_balance(
         RateLimitOptions::empty()
     };
 
+    let wrapper_contract_address = chain_cfg.wrapper_contract.clone().map(|v| v.address);
     stream::iter(0..jobs.len())
         .rate_limit(rate_limit_options)
         .for_each_concurrent(account_balance_options.tasks, |i| {
@@ -113,7 +114,7 @@ pub async fn account_balance(
                 let balance = get_balance(
                     web3,
                     token,
-                    None,
+                    wrapper_contract_address,
                     job,
                     !account_balance_options.hide_gas,
                     None,

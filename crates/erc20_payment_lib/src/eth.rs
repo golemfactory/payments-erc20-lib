@@ -1,8 +1,4 @@
-use crate::contracts::{
-    encode_call_with_details, encode_erc20_allowance, encode_erc20_balance_of,
-    encode_get_attestation, encode_get_deposit_details, encode_get_schema,
-    encode_get_validate_deposit_signature, encode_validate_contract,
-};
+use crate::contracts::{decode_call_with_details, encode_call_with_details, encode_erc20_allowance, encode_erc20_balance_of, encode_get_attestation, encode_get_deposit_details, encode_get_schema, encode_get_validate_deposit_signature, encode_validate_contract};
 use crate::error::*;
 use crate::runtime::ValidateDepositResult;
 use crate::{err_create, err_custom_create, err_from};
@@ -502,23 +498,27 @@ pub async fn get_balance(
                 .clone()
                 .eth_call(
                     CallRequest {
-                        from: None,
                         to: Some(call_with_details),
-                        gas: None,
-                        gas_price: None,
-                        value: None,
                         data: Some(Bytes::from(call_data)),
-                        transaction_type: None,
-                        access_list: None,
-                        max_fee_per_gas: None,
-                        max_priority_fee_per_gas: None,
+                        ..Default::default()
                     },
                     None,
                 )
                 .await
                 .map_err(err_from!())?;
 
-            log::debug!("Token balance response: {:?}", res);
+            let (block_info, call_result) = decode_call_with_details(&res.0)?;
+
+            let now = chrono::Utc::now();
+            let seconds_old = (now - block_info.block_datetime).num_seconds();
+            if seconds_old > 10 {
+                log::warn!("Balance is {seconds_old}s old");
+            }
+            //decode call_result
+
+            let token_balance = U256::from_big_endian(&call_result);
+
+            log::error!("Token balance response: {:?} - token balance: {}", block_info, token_balance);
         }
     };
 
