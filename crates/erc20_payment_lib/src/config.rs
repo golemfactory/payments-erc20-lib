@@ -82,7 +82,6 @@ pub struct WrapperContractSettings {
     pub address: Address,
 }
 
-
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct MintContractSettings {

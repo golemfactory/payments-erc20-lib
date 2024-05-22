@@ -22,12 +22,11 @@ lazy_static! {
         prepare_contract_template(include_bytes!("../contracts/faucet.json")).unwrap();
     pub static ref ERC20_CONTRACT_TEMPLATE: Contract<Http> =
         prepare_contract_template(include_bytes!("../contracts/ierc20.json")).unwrap();
-    pub static ref ERC20_MULTI_CONTRACT_TEMPLATE: Contract<Http> = {
-        prepare_contract_template(include_bytes!("../contracts/multi_transfer_erc20.json")).unwrap()
-    };
-    pub static ref WRAPPER_CONTRACT_TEMPLATE: Contract<Http> = {
-        prepare_contract_template(include_bytes!("../contracts/wrapper_call.json")).unwrap()
-    };
+    pub static ref ERC20_MULTI_CONTRACT_TEMPLATE: Contract<Http> =
+        prepare_contract_template(include_bytes!("../contracts/multi_transfer_erc20.json"))
+            .unwrap();
+    pub static ref WRAPPER_CONTRACT_TEMPLATE: Contract<Http> =
+        prepare_contract_template(include_bytes!("../contracts/wrapper_call.json")).unwrap();
     pub static ref LOCK_CONTRACT_TEMPLATE: Contract<Http> =
         prepare_contract_template(include_bytes!("../contracts/lock_payments.json")).unwrap();
     pub static ref DISTRIBUTOR_CONTRACT_TEMPLATE: Contract<Http> =
