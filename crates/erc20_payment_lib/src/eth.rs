@@ -489,38 +489,29 @@ pub async fn get_balance(
         let call_data = encode_call_with_details(token_address, abi_encoded_get_balance)
             .map_err(err_from!())?;
 
-        let res = if let Some(block_number) = args.block_number {
+        let block_id = if let Some(block_number) = args.block_number {
             log::debug!(
                 "Checking balance (contract) for block number {}",
                 block_number
             );
-            web3.clone()
-                .eth_call(
-                    CallRequest {
-                        from: Some(args.address),
-                        to: Some(call_with_details),
-                        data: Some(Bytes::from(call_data)),
-                        ..Default::default()
-                    },
-                    Some(BlockId::Number(BlockNumber::Number(block_number.into()))),
-                )
-                .await
-                .map_err(err_from!())?
+            Some(BlockId::Number(BlockNumber::Number(block_number.into())))
         } else {
             log::debug!("Checking balance (contract) for latest block");
-            web3.clone()
-                .eth_call(
-                    CallRequest {
-                        from: Some(args.address),
-                        to: Some(call_with_details),
-                        data: Some(Bytes::from(call_data)),
-                        ..Default::default()
-                    },
-                    None,
-                )
-                .await
-                .map_err(err_from!())?
+            None
         };
+        let res = web3
+            .clone()
+            .eth_call(
+                CallRequest {
+                    from: Some(args.address),
+                    to: Some(call_with_details),
+                    data: Some(Bytes::from(call_data)),
+                    ..Default::default()
+                },
+                block_id,
+            )
+            .await
+            .map_err(err_from!())?;
 
         let (block_info, call_result) = decode_call_with_details(&res.0)?;
 
@@ -554,20 +545,20 @@ pub async fn get_balance(
             block_datetime: block_info.block_datetime,
         })
     } else {
-        let block_info = if let Some(block_number) = args.block_number {
+        let block_id = if let Some(block_number) = args.block_number {
             log::debug!("Checking balance for block number {}", block_number);
-            web3.clone()
-                .eth_block(BlockId::Number(BlockNumber::Number(block_number.into())))
-                .await
-                .map_err(err_from!())?
-                .ok_or(err_custom_create!("Cannot found block_info"))?
+            BlockId::Number(BlockNumber::Number(block_number.into()))
         } else {
-            web3.clone()
-                .eth_block(BlockId::Number(BlockNumber::Latest))
-                .await
-                .map_err(err_from!())?
-                .ok_or(err_custom_create!("Cannot found block_info"))?
+            log::debug!("Checking balance for latest block");
+            BlockId::Number(BlockNumber::Latest)
         };
+        let block_info = web3
+            .clone()
+            .eth_block(block_id)
+            .await
+            .map_err(err_from!())?
+            .ok_or(err_custom_create!("Cannot found block_info"))?;
+
         let block_number = block_info
             .number
             .ok_or(err_custom_create!(
