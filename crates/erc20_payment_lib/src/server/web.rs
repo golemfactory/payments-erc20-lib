@@ -1,5 +1,6 @@
 use crate::eth::{
     get_attestation_details, get_balance, get_schema_details, Attestation, AttestationSchema,
+    GetBalanceArgs,
 };
 use crate::runtime::{PaymentRuntime, SharedState, TransferArgs, TransferType};
 use crate::server::ws::event_stream_websocket_endpoint;
@@ -15,7 +16,6 @@ use actix_web::{web, HttpRequest, HttpResponse, Responder, Scope};
 use chrono::{DateTime, Utc};
 use erc20_payment_lib_common::model::DepositId;
 use erc20_payment_lib_common::ops::*;
-use erc20_payment_lib_common::utils::datetime_from_u256_timestamp;
 use erc20_payment_lib_common::{export_metrics_to_prometheus, FaucetData};
 use erc20_rpc_pool::VerifyEndpointResult;
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use web3::ethabi;
-use web3::types::{Address, BlockId, BlockNumber, H256, U256};
+use web3::types::{Address, H256, U256};
 
 pub struct ServerData {
     pub shared_state: Arc<std::sync::Mutex<SharedState>>,
@@ -909,54 +909,32 @@ async fn account_balance(
         .get(&network_id)
         .ok_or(actix_web::error::ErrorBadRequest("No config found"))?;
 
-    let block_info = chain
-        .provider
-        .clone()
-        .eth_block(BlockId::Number(BlockNumber::Latest))
+    let args = GetBalanceArgs {
+        address: Default::default(),
+        token_address: Some(chain.glm_address),
+        call_with_details: chain.wrapper_contract_address,
+        block_number: None,
+        chain_id: Some(chain.chain_id as u64),
+    };
+    let balance_result = get_balance(chain.provider.clone(), args)
         .await
         .map_err(|err| {
-            actix_web::error::ErrorInternalServerError(format!("Failed to get latest block {err}"))
-        })?
-        .ok_or(actix_web::error::ErrorInternalServerError(
-            "Failed to found block info",
-        ))?;
-
-    let block_number = block_info
-        .number
-        .ok_or(actix_web::error::ErrorInternalServerError(
-            "Failed to found block number in block info",
-        ))?;
-
-    let block_date = datetime_from_u256_timestamp(block_info.timestamp).ok_or(
-        actix_web::error::ErrorInternalServerError("Failed to found block date in block info"),
-    )?;
-
-    let balance = get_balance(
-        chain.provider.clone(),
-        Some(chain.glm_address),
-        chain.wrapper_contract_address,
-        account,
-        true,
-        Some(block_number.as_u64()),
-    )
-    .await
-    .map_err(|err| {
-        actix_web::error::ErrorInternalServerError(format!("Failed to get balance {err}"))
-    })?;
+            actix_web::error::ErrorInternalServerError(format!("Failed to get balance {err}"))
+        })?;
 
     Ok(web::Json(AccountBalanceResponse {
         network_id,
         account: format!("{:#x}", account),
-        gas_balance: balance
+        gas_balance: balance_result
             .gas_balance
             .map(|b| b.to_string())
             .unwrap_or("0".to_string()),
-        token_balance: balance
+        token_balance: balance_result
             .token_balance
             .map(|b| b.to_string())
             .unwrap_or("0".to_string()),
-        block_number: block_number.as_u64(),
-        block_date,
+        block_number: balance_result.block_number,
+        block_date: balance_result.block_datetime,
     }))
 }
 

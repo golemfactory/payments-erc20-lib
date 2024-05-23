@@ -1,5 +1,5 @@
 use erc20_payment_lib::config;
-use erc20_payment_lib::eth::get_balance;
+use erc20_payment_lib::eth::{get_balance, GetBalanceArgs};
 use erc20_payment_lib::setup::PaymentSetup;
 use erc20_payment_lib_common::err_custom_create;
 use erc20_payment_lib_common::error::*;
@@ -111,13 +111,16 @@ pub async fn account_balance(
             let web3 = web3.clone();
             async move {
                 log::debug!("Getting balance for account: {:#x}", job);
+                let args = GetBalanceArgs {
+                    address: job,
+                    token_address: token,
+                    call_with_details: wrapper_contract_address,
+                    block_number: None,
+                    chain_id: Some(chain_cfg.chain_id as u64),
+                };
                 let balance = get_balance(
                     web3,
-                    token,
-                    wrapper_contract_address,
-                    job,
-                    !account_balance_options.hide_gas,
-                    None,
+                    args
                 )
                 .await
                 .unwrap();

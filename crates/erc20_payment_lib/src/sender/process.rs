@@ -244,6 +244,7 @@ pub async fn process_transaction(
                 chain_setup.glm_address,
                 web3.clone(),
                 web3_tx_dao,
+                chain_setup.wrapper_contract_address,
             )
             .await
             {
@@ -324,10 +325,12 @@ pub async fn process_transaction(
         update_tx(conn, web3_tx_dao).await.map_err(err_from!())?;
         send_transaction(
             conn,
+            chain_setup.chain_id,
             chain_setup.glm_address,
             event_sender.clone(),
             web3.clone(),
             web3_tx_dao,
+            chain_setup.wrapper_contract_address,
         )
         .await?;
         update_tx(conn, web3_tx_dao).await.map_err(err_from!())?;
@@ -790,10 +793,12 @@ pub async fn process_transaction(
 
             send_transaction(
                 conn,
+                chain_setup.chain_id,
                 chain_setup.glm_address,
                 event_sender.clone(),
                 web3.clone(),
                 web3_tx_dao,
+                chain_setup.wrapper_contract_address,
             )
             .await?;
             web3_tx_dao.broadcast_count += 1;
