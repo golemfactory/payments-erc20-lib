@@ -118,12 +118,7 @@ pub async fn account_balance(
                     block_number: None,
                     chain_id: Some(chain_cfg.chain_id as u64),
                 };
-                let balance = get_balance(
-                    web3,
-                    args
-                )
-                .await
-                .unwrap();
+                let balance = get_balance(web3, args).await.unwrap();
 
                 let gas_balance = balance.gas_balance.map(|b| b.to_string());
                 let token_balance = balance.token_balance.map(|b| b.to_string());

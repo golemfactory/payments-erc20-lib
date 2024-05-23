@@ -33,6 +33,7 @@ use crate::actions::deposit::create::make_deposit_local;
 use crate::actions::deposit::details::deposit_details_local;
 use crate::actions::deposit::terminate::terminate_deposit_local;
 use crate::stats::{export_stats, run_stats};
+use erc20_payment_lib::eth::GetBalanceArgs;
 use erc20_payment_lib::faucet_client::faucet_donate;
 use erc20_payment_lib::misc::gen_private_keys;
 use erc20_payment_lib::runtime::{
@@ -50,7 +51,6 @@ use std::sync::Arc;
 use structopt::StructOpt;
 use tokio::sync::{broadcast, Mutex};
 use web3::types::U256;
-use erc20_payment_lib::eth::GetBalanceArgs;
 
 async fn main_internal() -> Result<(), PaymentError> {
     dotenv::dotenv().ok();
@@ -530,18 +530,21 @@ async fn main_internal() -> Result<(), PaymentError> {
                         let args = GetBalanceArgs {
                             address: public_addr,
                             token_address: Some(chain_cfg.token.address),
-                            call_with_details: chain_cfg.wrapper_contract.clone().map(|c| c.address),
+                            call_with_details: chain_cfg
+                                .wrapper_contract
+                                .clone()
+                                .map(|c| c.address),
                             block_number: None,
                             chain_id: Some(chain_cfg.chain_id as u64),
                         };
-                        get_token_balance(
-                            payment_setup.get_provider(chain_cfg.chain_id)?,
-                            args
-                        )
-                        .await?.token_balance.ok_or(
-                            err_custom_create!("No balance found for address {:#x}", public_addr)
-                        )?
-                        .to_string()
+                        get_token_balance(payment_setup.get_provider(chain_cfg.chain_id)?, args)
+                            .await?
+                            .token_balance
+                            .ok_or(err_custom_create!(
+                                "No balance found for address {:#x}",
+                                public_addr
+                            ))?
+                            .to_string()
                     } else if single_transfer_options.token == "eth"
                         || single_transfer_options.token == "matic"
                     {

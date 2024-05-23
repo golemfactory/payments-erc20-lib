@@ -1530,8 +1530,7 @@ pub async fn make_deposit(
             "Token balance not found for account {:#x}",
             from
         ))?;
-        if token_balance < amount + fee_amount
-        {
+        if token_balance < amount + fee_amount {
             return Err(err_custom_create!(
                 "You don't have enough: {} GLM on network with chain id: {} and account {:#x}",
                 token_balance,

@@ -490,7 +490,7 @@ pub async fn check_transaction(
     glm_token: Address,
     web3: Arc<Web3RpcPool>,
     web3_tx_dao: &mut TxDbObj,
-    wrapper_contract_address: Option<Address>
+    wrapper_contract_address: Option<Address>,
 ) -> Result<Option<U256>, PaymentError> {
     let call_request = dao_to_call_request(web3_tx_dao)?;
     log::debug!("Check transaction with gas estimation: {:?}", call_request);
@@ -519,7 +519,15 @@ pub async fn check_transaction(
                     return Ok(None);
                 } else if e.to_string().contains("transfer amount exceeds balance") {
                     log::warn!("Transfer amount exceed balance (chain_id: {}, sender: {:#x}). Getting details...", web3_tx_dao.chain_id, Address::from_str(&web3_tx_dao.from_addr).map_err(err_from!())?);
-                    match get_no_token_details(web3, conn, web3_tx_dao, glm_token, wrapper_contract_address).await {
+                    match get_no_token_details(
+                        web3,
+                        conn,
+                        web3_tx_dao,
+                        glm_token,
+                        wrapper_contract_address,
+                    )
+                    .await
+                    {
                         Ok(stuck_reason) => {
                             log::warn!(
                                 "Got details. needed: {} balance: {}. needed - balance: {}",
