@@ -102,35 +102,40 @@ pub fn encode_erc20_allowance(
    uint256 basefee;
 */
 #[derive(Debug, Clone)]
-pub struct CallWithDetailsBlockInfo {
+pub struct CallWithDetails {
+    pub chain_id: u64,
+    pub eth_balance: U256,
     pub block_number: u64,
     pub block_datetime: DateTime<Utc>,
 }
 
 pub fn decode_call_with_details(
     bytes: &[u8],
-) -> Result<(crate::contracts::CallWithDetailsBlockInfo, Vec<u8>), PaymentError> {
+) -> Result<(crate::contracts::CallWithDetails, Vec<u8>), PaymentError> {
     let decoded = ethabi::decode(
         &[ethabi::ParamType::Tuple(vec![
-            ethabi::ParamType::Tuple(vec![
-                ethabi::ParamType::Uint(256),
-                ethabi::ParamType::Uint(256),
-            ]),
+            ethabi::ParamType::Uint(256),
+            ethabi::ParamType::Uint(256),
+            ethabi::ParamType::Uint(256),
+            ethabi::ParamType::Uint(256),
             ethabi::ParamType::Bytes,
         ])],
         bytes,
     )
     .map_err(|err| err_custom_create!("Failed to decode call with details: {}", err))?;
 
-    let tuple_main = decoded[0].clone().into_tuple().unwrap();
-    let tuple_block_info = tuple_main[0].clone().into_tuple().unwrap();
+    let tuple = decoded[0].clone().into_tuple().unwrap();
 
-    let number: U256 = tuple_block_info[0].clone().into_uint().unwrap();
-    let timestamp: U256 = tuple_block_info[1].clone().into_uint().unwrap();
+    let chain_id: U256 = tuple[0].clone().into_uint().unwrap();
+    let number: U256 = tuple[1].clone().into_uint().unwrap();
+    let timestamp: U256 = tuple[2].clone().into_uint().unwrap();
+    let balance: U256 = tuple[3].clone().into_uint().unwrap();
 
-    let call_result = tuple_main[1].clone().into_bytes().unwrap();
+    let call_result = tuple[4].clone().into_bytes().unwrap();
 
-    let block_details = CallWithDetailsBlockInfo {
+    let block_details = CallWithDetails {
+        chain_id: chain_id.as_u64(),
+        eth_balance: balance,
         block_number: number.as_u64(),
         block_datetime: datetime_from_u256_timestamp(timestamp).ok_or(err_custom_create!(
             "Failed to convert timestamp to datetime"

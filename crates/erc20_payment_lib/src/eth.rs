@@ -502,6 +502,7 @@ pub async fn get_balance(
                 .clone()
                 .eth_call(
                     CallRequest {
+                        from: Some(address),
                         to: Some(call_with_details),
                         data: Some(Bytes::from(call_data)),
                         ..Default::default()
