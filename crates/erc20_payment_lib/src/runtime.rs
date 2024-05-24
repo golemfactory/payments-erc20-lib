@@ -27,7 +27,10 @@ use sqlx::SqlitePool;
 use crate::account_balance::{test_balance_loop, BalanceOptions2};
 use crate::config::AdditionalOptions;
 use crate::contracts::CreateDepositArgs;
-use crate::eth::{get_eth_addr_from_secret, get_latest_block_info, DepositDetails};
+use crate::eth::{
+    get_eth_addr_from_secret, get_latest_block_info, DepositDetails, GetBalanceArgs,
+    GetBalanceResult,
+};
 use crate::sender::service_loop;
 use crate::utils::{DecimalConvExt, StringConvExt, U256ConvExt};
 use chrono::{DateTime, Utc};
@@ -719,7 +722,8 @@ impl PaymentRuntime {
         &self,
         chain_name: String,
         address: Address,
-    ) -> Result<U256, PaymentError> {
+        block_number: Option<u64>,
+    ) -> Result<GetBalanceResult, PaymentError> {
         let chain_cfg = self
             .config
             .chain
@@ -733,7 +737,14 @@ impl PaymentRuntime {
 
         let web3 = self.setup.get_provider(chain_cfg.chain_id)?;
 
-        get_token_balance(web3, token_address, address, None).await
+        let args = GetBalanceArgs {
+            address,
+            token_address: Some(token_address),
+            call_with_details: chain_cfg.wrapper_contract.clone().map(|c| c.address),
+            block_number,
+            chain_id: Some(chain_cfg.chain_id as u64),
+        };
+        get_token_balance(web3, args).await
     }
 
     /// Force sources and enpoints check depending on input. If wait is set to false, it is nonblocking.
@@ -871,31 +882,6 @@ impl PaymentRuntime {
         Ok(web3_rpc_pool_info)
     }
 
-    pub async fn get_gas_balance(
-        &self,
-        chain_name: String,
-        address: Address,
-    ) -> Result<U256, PaymentError> {
-        let chain_cfg = self
-            .config
-            .chain
-            .get(&chain_name)
-            .ok_or(err_custom_create!(
-                "Chain {} not found in config file",
-                chain_name
-            ))?;
-
-        let web3 = self.setup.get_provider(chain_cfg.chain_id)?;
-
-        let balance_result = crate::eth::get_balance(web3, None, address, true, None).await?;
-
-        let gas_balance = balance_result
-            .gas_balance
-            .ok_or(err_custom_create!("get_balance didn't yield gas_balance"))?;
-
-        Ok(gas_balance)
-    }
-
     pub async fn transfer_guess_account(
         &self,
         transfer_args: TransferArgs,
@@ -990,6 +976,7 @@ impl PaymentRuntime {
             golem_address,
             chain_cfg.mint_contract.clone().map(|c| c.address),
             false,
+            chain_cfg.wrapper_contract.clone().map(|c| c.address),
         )
         .await;
         self.wake.notify_one();
@@ -1016,6 +1003,7 @@ impl PaymentRuntime {
             golem_address,
             chain_cfg.mint_contract.clone().map(|c| c.address),
             false,
+            chain_cfg.wrapper_contract.clone().map(|c| c.address),
         )
         .await;
         self.wake.notify_one();
@@ -1184,6 +1172,7 @@ pub async fn distribute_gas(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn mint_golem_token(
     web3: Arc<Web3RpcPool>,
     conn: &SqlitePool,
@@ -1192,6 +1181,7 @@ pub async fn mint_golem_token(
     glm_address: Address,
     faucet_contract_address: Option<Address>,
     skip_balance_check: bool,
+    wrapper_contract_address: Option<Address>,
 ) -> Result<(), PaymentError> {
     let faucet_contract_address = if let Some(faucet_contract_address) = faucet_contract_address {
         faucet_contract_address
@@ -1202,23 +1192,32 @@ pub async fn mint_golem_token(
     };
 
     if !skip_balance_check {
-        let balance = web3
-            .clone()
-            .eth_balance(from, None)
-            .await
-            .map_err(err_from!())?
+        let args = GetBalanceArgs {
+            address: from,
+            token_address: Some(glm_address),
+            call_with_details: wrapper_contract_address,
+            block_number: None,
+            chain_id: Some(chain_id),
+        };
+
+        let token_balance_result = get_token_balance(web3.clone(), args).await?;
+
+        let balance = token_balance_result
+            .gas_balance
+            .ok_or(err_custom_create!("Gas balance not found"))?
             .to_eth_saturate();
         if balance < Decimal::from_f64(0.005).unwrap() {
             return Err(err_custom_create!(
-            "You need at least 0.005 ETH to continue. You have {} ETH on network with chain id: {} and account {:#x} ",
-            balance,
-            chain_id,
-            from
-        ));
-        };
+                "You need at least 0.005 ETH to continue. You have {} ETH on network with chain id: {} and account {:#x} ",
+                balance,
+                chain_id,
+                from
+            ));
+        }
 
-        let token_balance = get_token_balance(web3.clone(), glm_address, from, None)
-            .await?
+        let token_balance = token_balance_result
+            .token_balance
+            .ok_or(err_custom_create!("Token balance not found"))?
             .to_eth_saturate();
 
         if token_balance > Decimal::from_f64(500.0).unwrap() {
@@ -1515,14 +1514,22 @@ pub async fn make_deposit(
 
     if !opt.skip_balance_check {
         let block_info = get_latest_block_info(web3.clone()).await?;
-        let token_balance = get_token_balance(
+        let balance_result = get_token_balance(
             web3.clone(),
-            glm_address,
-            from,
-            Some(block_info.block_number),
+            GetBalanceArgs {
+                address: from,
+                token_address: Some(glm_address),
+                call_with_details: None,
+                block_number: Some(block_info.block_number),
+                chain_id: Some(chain_id),
+            },
         )
         .await?;
 
+        let token_balance = balance_result.token_balance.ok_or(err_custom_create!(
+            "Token balance not found for account {:#x}",
+            from
+        ))?;
         if token_balance < amount + fee_amount {
             return Err(err_custom_create!(
                 "You don't have enough: {} GLM on network with chain id: {} and account {:#x}",
@@ -1578,18 +1585,9 @@ pub async fn make_deposit(
 
 pub async fn get_token_balance(
     web3: Arc<Web3RpcPool>,
-    token_address: Address,
-    address: Address,
-    block_number: Option<u64>,
-) -> Result<U256, PaymentError> {
-    let balance_result =
-        crate::eth::get_balance(web3, Some(token_address), address, true, block_number).await?;
-
-    let token_balance = balance_result
-        .token_balance
-        .ok_or(err_custom_create!("get_balance didn't yield token_balance"))?;
-
-    Ok(token_balance)
+    args: GetBalanceArgs,
+) -> Result<GetBalanceResult, PaymentError> {
+    crate::eth::get_balance(web3, args).await
 }
 
 pub async fn get_unpaid_token_amount(

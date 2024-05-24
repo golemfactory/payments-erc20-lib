@@ -1,0 +1,122 @@
+[
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "externalContractAddress",
+                "type": "address"
+            },
+            {
+                "internalType": "bytes",
+                "name": "callData",
+                "type": "bytes"
+            }
+        ],
+        "name": "callWithDetails",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "chainId",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "blockNumber",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "blockTimestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "callerBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "callResult",
+                        "type": "bytes"
+                    }
+                ],
+                "internalType": "struct WrapperCall.CallWithDetailsResult",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "externalContractAddresses",
+                "type": "address[]"
+            },
+            {
+                "internalType": "bytes[]",
+                "name": "callDataArray",
+                "type": "bytes[]"
+            }
+        ],
+        "name": "multiCall",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address[]",
+                "name": "externalContractAddresses",
+                "type": "address[]"
+            },
+            {
+                "internalType": "bytes[]",
+                "name": "callDataArray",
+                "type": "bytes[]"
+            }
+        ],
+        "name": "multiCallWithDetails",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "chainId",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "blockNumber",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "blockTimestamp",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "callerBalance",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes[]",
+                        "name": "callResults",
+                        "type": "bytes[]"
+                    }
+                ],
+                "internalType": "struct WrapperCall.MultiCallWithDetailsResult",
+                "name": "",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]

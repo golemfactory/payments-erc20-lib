@@ -78,6 +78,12 @@ pub struct MultiContractSettings {
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
+pub struct WrapperContractSettings {
+    pub address: Address,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct MintContractSettings {
     pub address: Address,
     pub max_glm_allowed: Decimal,
@@ -144,6 +150,7 @@ pub struct Chain {
     pub max_fee_per_gas: Decimal,
     pub token: Token,
     pub multi_contract: Option<MultiContractSettings>,
+    pub wrapper_contract: Option<WrapperContractSettings>,
     pub mint_contract: Option<MintContractSettings>,
     pub lock_contract: Option<LockContractSettings>,
     pub distributor_contract: Option<DistributorContractSettings>,

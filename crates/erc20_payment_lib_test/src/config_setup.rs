@@ -40,6 +40,7 @@ pub async fn create_default_config_setup(proxy_url_base: &str, proxy_key: &str) 
             address: Address::from_str("0xF9861F83766CD507E0d2749B60d4fD6C68E5B96C").unwrap(),
             max_at_once: 10,
         }),
+        wrapper_contract: None,
         mint_contract: None,
         lock_contract: None,
         distributor_contract: None,

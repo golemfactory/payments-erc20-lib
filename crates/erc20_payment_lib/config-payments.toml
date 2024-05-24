@@ -212,6 +212,7 @@ currency-symbol = "tETH"
 priority-fee = 0.000001
 max-fee-per-gas = 20.0
 transaction-timeout = 100
+wrapper-contract = { address = "0xE168bCa171ccf51066E2106d8955BF22705a6905" }
 token = { address = "0x8888888815bf4DB87e57B609A50f938311EEd068", symbol = "tGLM" }
 multi-contract = { address = "0xAaAAAaA00E1841A63342db7188abA84BDeE236c7", max-at-once = 10 }
 mint-contract = { address = "0xFACe100969FF47EB58d2CF603321B581A84bcEaC", max-glm-allowed = 400 }
@@ -308,6 +309,7 @@ priority-fee = 30.111
 max-fee-per-gas = 500.0
 transaction-timeout = 100
 token = { address = "0x0B220b82F3eA3B7F6d9A1D8ab58930C064A2b5Bf", symbol = "GLM" }
+wrapper-contract = { address = "0xbB6aad747990BB6F7f56851556A3277e474C656a" }
 lock-contract = { address = "0x633193F5524849C84368ADF39aFDB0EedFAf8B29" }
 multi-contract = { address = "0x50100d4faf5f3b09987dea36dc2eddd57a3e561b", max-at-once = 10 }
 attestation-contract = { address = "0x5E634ef5355f45A855d02D66eCD687b1502AF790" }

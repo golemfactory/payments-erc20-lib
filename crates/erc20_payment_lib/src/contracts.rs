@@ -2,10 +2,12 @@ use lazy_static::lazy_static;
 
 use crate::err_custom_create;
 use crate::error::PaymentError;
+use chrono::{DateTime, Utc};
 use std::str::FromStr;
 use web3::contract::tokens::Tokenize;
 use web3::contract::Contract;
 
+use erc20_payment_lib_common::utils::datetime_from_u256_timestamp;
 use web3::transports::Http;
 use web3::types::{Address, H256, U256};
 use web3::{ethabi, Transport, Web3};
@@ -22,9 +24,11 @@ lazy_static! {
         prepare_contract_template(include_bytes!("../contracts/faucet.json")).unwrap();
     pub static ref ERC20_CONTRACT_TEMPLATE: Contract<Http> =
         prepare_contract_template(include_bytes!("../contracts/ierc20.json")).unwrap();
-    pub static ref ERC20_MULTI_CONTRACT_TEMPLATE: Contract<Http> = {
-        prepare_contract_template(include_bytes!("../contracts/multi_transfer_erc20.json")).unwrap()
-    };
+    pub static ref ERC20_MULTI_CONTRACT_TEMPLATE: Contract<Http> =
+        prepare_contract_template(include_bytes!("../contracts/multi_transfer_erc20.json"))
+            .unwrap();
+    pub static ref WRAPPER_CONTRACT_TEMPLATE: Contract<Http> =
+        prepare_contract_template(include_bytes!("../contracts/wrapper_call.json")).unwrap();
     pub static ref LOCK_CONTRACT_TEMPLATE: Contract<Http> =
         prepare_contract_template(include_bytes!("../contracts/lock_payments.json")).unwrap();
     pub static ref DISTRIBUTOR_CONTRACT_TEMPLATE: Contract<Http> =
@@ -85,6 +89,70 @@ pub fn encode_erc20_allowance(
     spender: Address,
 ) -> Result<Vec<u8>, web3::ethabi::Error> {
     contract_encode(&ERC20_CONTRACT_TEMPLATE, "allowance", (owner, spender))
+}
+
+/*
+
+   uint256 number;
+   uint256 timestamp;
+   uint256 difficulty;
+   uint256 gaslimit;
+   address coinbase;
+   bytes32 blockhash;
+   uint256 basefee;
+*/
+#[derive(Debug, Clone)]
+pub struct CallWithDetails {
+    pub chain_id: u64,
+    pub eth_balance: U256,
+    pub block_number: u64,
+    pub block_datetime: DateTime<Utc>,
+}
+
+pub fn decode_call_with_details(
+    bytes: &[u8],
+) -> Result<(crate::contracts::CallWithDetails, Vec<u8>), PaymentError> {
+    let decoded = ethabi::decode(
+        &[ethabi::ParamType::Tuple(vec![
+            ethabi::ParamType::Uint(256),
+            ethabi::ParamType::Uint(256),
+            ethabi::ParamType::Uint(256),
+            ethabi::ParamType::Uint(256),
+            ethabi::ParamType::Bytes,
+        ])],
+        bytes,
+    )
+    .map_err(|err| err_custom_create!("Failed to decode call with details: {}", err))?;
+
+    let tuple = decoded[0].clone().into_tuple().unwrap();
+
+    let chain_id: U256 = tuple[0].clone().into_uint().unwrap();
+    let number: U256 = tuple[1].clone().into_uint().unwrap();
+    let timestamp: U256 = tuple[2].clone().into_uint().unwrap();
+    let balance: U256 = tuple[3].clone().into_uint().unwrap();
+
+    let call_result = tuple[4].clone().into_bytes().unwrap();
+
+    let block_details = CallWithDetails {
+        chain_id: chain_id.as_u64(),
+        eth_balance: balance,
+        block_number: number.as_u64(),
+        block_datetime: datetime_from_u256_timestamp(timestamp).ok_or(err_custom_create!(
+            "Failed to convert timestamp to datetime"
+        ))?,
+    };
+    Ok((block_details, call_result))
+}
+
+pub fn encode_call_with_details(
+    call_target_address: Address,
+    call_data: Vec<u8>,
+) -> Result<Vec<u8>, web3::ethabi::Error> {
+    contract_encode(
+        &WRAPPER_CONTRACT_TEMPLATE,
+        "callWithDetails",
+        (call_target_address, call_data),
+    )
 }
 
 pub fn encode_distribute(
@@ -213,6 +281,7 @@ pub fn encode_create_deposit(
         ),
     )
 }
+
 pub fn encode_payout_single(
     id: U256,
     recipient: Address,

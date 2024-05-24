@@ -1,6 +1,6 @@
 use crate::contracts::*;
 use crate::error::*;
-use crate::eth::get_eth_addr_from_secret;
+use crate::eth::{get_eth_addr_from_secret, GetBalanceArgs};
 use crate::multi::pack_transfers_for_multi_contract;
 use crate::runtime::{
     get_token_balance, get_unpaid_token_amount, remove_transaction_force, send_driver_event,
@@ -17,6 +17,7 @@ use erc20_payment_lib_common::{
     DriverEvent, DriverEventContent, NoGasDetails, NoTokenDetails, TransactionStuckReason,
 };
 use erc20_rpc_pool::Web3RpcPool;
+use rust_decimal::Decimal;
 use secp256k1::SecretKey;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
@@ -452,19 +453,25 @@ pub async fn get_no_token_details(
     conn: &SqlitePool,
     web3_tx_dao: &TxDbObj,
     glm_token: Address,
+    wrapper_contract_address: Option<Address>,
 ) -> Result<NoTokenDetails, PaymentError> {
+    let args = GetBalanceArgs {
+        address: Address::from_str(&web3_tx_dao.from_addr).map_err(err_from!())?,
+        token_address: Some(glm_token),
+        call_with_details: wrapper_contract_address,
+        block_number: None,
+        chain_id: Some(web3_tx_dao.chain_id as u64),
+    };
     Ok(NoTokenDetails {
         tx: web3_tx_dao.clone(),
         sender: Address::from_str(&web3_tx_dao.from_addr).map_err(err_from!())?,
-        token_balance: get_token_balance(
-            web3,
-            glm_token,
-            Address::from_str(&web3_tx_dao.from_addr).map_err(err_from!())?,
-            None,
-        )
-        .await?
-        .to_eth()
-        .map_err(err_from!())?,
+        token_balance: get_token_balance(web3, args)
+            .await
+            .map(|r| r.token_balance)
+            .unwrap_or(Default::default())
+            .unwrap_or(Default::default())
+            .to_eth()
+            .unwrap_or(Decimal::default()),
         token_needed: get_unpaid_token_amount(
             conn,
             web3_tx_dao.chain_id,
@@ -483,6 +490,7 @@ pub async fn check_transaction(
     glm_token: Address,
     web3: Arc<Web3RpcPool>,
     web3_tx_dao: &mut TxDbObj,
+    wrapper_contract_address: Option<Address>,
 ) -> Result<Option<U256>, PaymentError> {
     let call_request = dao_to_call_request(web3_tx_dao)?;
     log::debug!("Check transaction with gas estimation: {:?}", call_request);
@@ -511,7 +519,15 @@ pub async fn check_transaction(
                     return Ok(None);
                 } else if e.to_string().contains("transfer amount exceeds balance") {
                     log::warn!("Transfer amount exceed balance (chain_id: {}, sender: {:#x}). Getting details...", web3_tx_dao.chain_id, Address::from_str(&web3_tx_dao.from_addr).map_err(err_from!())?);
-                    match get_no_token_details(web3, conn, web3_tx_dao, glm_token).await {
+                    match get_no_token_details(
+                        web3,
+                        conn,
+                        web3_tx_dao,
+                        glm_token,
+                        wrapper_contract_address,
+                    )
+                    .await
+                    {
                         Ok(stuck_reason) => {
                             log::warn!(
                                 "Got details. needed: {} balance: {}. needed - balance: {}",
@@ -631,10 +647,12 @@ pub async fn sign_transaction_with_callback(
 
 pub async fn send_transaction(
     conn: &SqlitePool,
+    chain_id: i64,
     glm_token: Address,
     event_sender: Option<mpsc::Sender<DriverEvent>>,
     web3: Arc<Web3RpcPool>,
     web3_tx_dao: &mut TxDbObj,
+    wrapper_contract_address: Option<Address>,
 ) -> Result<(), PaymentError> {
     if let Some(signed_raw_data) = web3_tx_dao.signed_raw_data.as_ref() {
         let bytes = Bytes(
@@ -683,21 +701,24 @@ pub async fn send_transaction(
                             }),
                         ))
                     } else if e.message.contains("transfer amount exceeds balance") {
+                        let args = GetBalanceArgs {
+                            address: Default::default(),
+                            token_address: Some(glm_token),
+                            call_with_details: wrapper_contract_address,
+                            block_number: None,
+                            chain_id: Some(chain_id as u64),
+                        };
+                        let token_balance = get_token_balance(web3, args)
+                            .await
+                            .map(|r| r.token_balance)
+                            .unwrap_or(Default::default())
+                            .unwrap_or(Default::default());
                         Some(DriverEventContent::TransactionStuck(
                             TransactionStuckReason::NoToken(NoTokenDetails {
                                 tx: web3_tx_dao.clone(),
                                 sender: Address::from_str(&web3_tx_dao.from_addr)
                                     .map_err(err_from!())?,
-                                token_balance: get_token_balance(
-                                    web3,
-                                    glm_token,
-                                    Address::from_str(&web3_tx_dao.from_addr)
-                                        .map_err(err_from!())?,
-                                    None,
-                                )
-                                .await?
-                                .to_eth()
-                                .map_err(err_from!())?,
+                                token_balance: token_balance.to_eth().unwrap_or(Decimal::default()),
                                 token_needed: get_unpaid_token_amount(
                                     conn,
                                     web3_tx_dao.chain_id,

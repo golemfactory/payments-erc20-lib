@@ -1,5 +1,5 @@
 use erc20_payment_lib::config;
-use erc20_payment_lib::eth::get_balance;
+use erc20_payment_lib::eth::{get_balance, GetBalanceArgs};
 use erc20_payment_lib::setup::PaymentSetup;
 use erc20_payment_lib_common::err_custom_create;
 use erc20_payment_lib_common::error::*;
@@ -102,6 +102,7 @@ pub async fn account_balance(
         RateLimitOptions::empty()
     };
 
+    let wrapper_contract_address = chain_cfg.wrapper_contract.clone().map(|v| v.address);
     stream::iter(0..jobs.len())
         .rate_limit(rate_limit_options)
         .for_each_concurrent(account_balance_options.tasks, |i| {
@@ -110,10 +111,14 @@ pub async fn account_balance(
             let web3 = web3.clone();
             async move {
                 log::debug!("Getting balance for account: {:#x}", job);
-                let balance =
-                    get_balance(web3, token, job, !account_balance_options.hide_gas, None)
-                        .await
-                        .unwrap();
+                let args = GetBalanceArgs {
+                    address: job,
+                    token_address: token,
+                    call_with_details: wrapper_contract_address,
+                    block_number: None,
+                    chain_id: Some(chain_cfg.chain_id as u64),
+                };
+                let balance = get_balance(web3, args).await.unwrap();
 
                 let gas_balance = balance.gas_balance.map(|b| b.to_string());
                 let token_balance = balance.token_balance.map(|b| b.to_string());
