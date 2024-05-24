@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use erc20_payment_lib::config;
 use erc20_payment_lib::eth::{get_balance, GetBalanceArgs};
 use erc20_payment_lib::setup::PaymentSetup;
@@ -12,6 +13,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 use stream_rate_limiter::{RateLimitOptions, StreamRateLimitExt};
 use structopt::StructOpt;
+use tokio::time::Instant;
 use web3::types::Address;
 
 #[derive(Clone, StructOpt)]
@@ -36,6 +38,9 @@ pub struct BalanceOptions {
     #[structopt(long = "tasks", default_value = "1")]
     pub tasks: usize,
 
+    #[structopt(long = "no-wrapper-contract")]
+    pub no_wrapper_contract: bool,
+
     #[structopt(long = "interval")]
     pub interval: Option<f64>,
 }
@@ -49,6 +54,8 @@ pub struct BalanceResult {
     pub token: Option<String>,
     pub token_decimal: Option<String>,
     pub token_human: Option<String>,
+    pub block_number: u64,
+    pub block_datetime: DateTime<Utc>,
 }
 
 pub async fn account_balance(
@@ -102,7 +109,12 @@ pub async fn account_balance(
         RateLimitOptions::empty()
     };
 
-    let wrapper_contract_address = chain_cfg.wrapper_contract.clone().map(|v| v.address);
+    let wrapper_contract_address = if account_balance_options.no_wrapper_contract {
+        None
+    } else {
+        chain_cfg.wrapper_contract.clone().map(|v| v.address)
+    };
+
     stream::iter(0..jobs.len())
         .rate_limit(rate_limit_options)
         .for_each_concurrent(account_balance_options.tasks, |i| {
@@ -118,7 +130,14 @@ pub async fn account_balance(
                     block_number: None,
                     chain_id: Some(chain_cfg.chain_id as u64),
                 };
+                let current_time = Instant::now();
                 let balance = get_balance(web3, args).await.unwrap();
+                let elapsed = current_time.elapsed();
+                log::info!(
+                    "Got balance for account: {:#x} in {}ms",
+                    job,
+                    elapsed.as_millis()
+                );
 
                 let gas_balance = balance.gas_balance.map(|b| b.to_string());
                 let token_balance = balance.token_balance.map(|b| b.to_string());
@@ -153,6 +172,8 @@ pub async fn account_balance(
                         token: token_balance,
                         token_decimal: token_balance_decimal,
                         token_human: token_balance_human,
+                        block_number: balance.block_number,
+                        block_datetime: balance.block_datetime,
                     },
                 );
             }

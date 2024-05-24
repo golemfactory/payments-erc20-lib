@@ -16,6 +16,7 @@ pub async fn test_get_balance(
         block_number: None,
         tasks: 4,
         interval: Some(0.001),
+        no_wrapper_contract: false,
     };
 
     account_balance(account_balance_options.clone(), &config_check).await
