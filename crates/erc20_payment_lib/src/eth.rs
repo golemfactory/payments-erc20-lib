@@ -533,7 +533,7 @@ pub async fn get_balance(
 
         let token_balance = U256::from_big_endian(&call_result);
 
-        log::error!(
+        log::debug!(
             "Token balance response: {:?} - token balance: {}",
             block_info,
             token_balance
