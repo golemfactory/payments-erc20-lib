@@ -14,7 +14,6 @@ use std::str::FromStr;
 use stream_rate_limiter::{RateLimitOptions, StreamRateLimitExt};
 use structopt::StructOpt;
 use tokio::time::Instant;
-use toml::value::Datetime;
 use web3::types::Address;
 
 #[derive(Clone, StructOpt)]
