@@ -118,6 +118,8 @@ jobs:
       - name: Transfer all left ETH tokens
         run: |
           set -x 
+          # wait for the blockchain to propagate info about the transaction
+          sleep 30
           erc20_processor transfer --account-no 1 --recipient 0x5b984629E2Cc7570cBa7dD745b83c3dD23Ba6d0f --token eth --all
           erc20_processor transfer --account-no 2 --recipient 0x5b984629E2Cc7570cBa7dD745b83c3dD23Ba6d0f --token eth --all
           erc20_processor run
