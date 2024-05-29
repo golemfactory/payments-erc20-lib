@@ -1,0 +1,174 @@
+[engine]
+# proces interval (in seconds) is to set how often we want to recheck transaction status
+# minimum 1 second, sensible maximum around 60 seconds
+process-interval = 15
+# proces interval after send (in seconds) is to set how long to wait after sending transaction before checking for confirmation
+# sensible minimum 20 seconds, sensible maximum around 60 seconds
+process-interval-after-send = 30
+# proces interval after error (in seconds) is to set how long to wait after encountering error before trying again
+# minimum 1 second, sensible maximum around 60 seconds
+process-interval-after-error = 25
+
+# proces interval after missing gas or token (in seconds)
+# it is starting with checking every process-interval-after-no-gas-or-token-start
+# and then increasing by multiplying by process-interval-after-no-gas-or-token-increase
+# up to process-interval-after-no-gas-or-token-max
+process-interval-after-no-gas-or-token-start = 20
+process-interval-after-no-gas-or-token-max = 40
+process-interval-after-no-gas-or-token-increase = 1.5
+
+# report alive interval (in seconds) is to set how often we want to report that we are alive
+# minimum 1 second, maximum is capped by gather-interval
+report-alive-interval = 10
+# gather interval (in seconds) is to set how often payments are gathered
+# minimum 1 second, no maximum limit
+gather-interval = 60
+# gather payments on payment driver start (otherwise wait for first gather-interval)
+gather-at-start = true
+automatic-recover = false
+# set to true to not respect deadlines attached to payments
+ignore-deadlines = false
+
+
+[chain.mainnet]
+chain-name = "Mainnet"
+chain-id = 1
+currency-symbol = "ETH"
+priority-fee = 1.01
+max-fee-per-gas = 40.0
+transaction-timeout = 100
+token = { address = "0x7DD9c5Cba05E151C895FDe1CF355C9A1D5DA6429", symbol = "GLM" }
+confirmation-blocks = 1
+block-explorer-url = "https://etherscan.io"
+external-source-check-interval = 300
+
+[[chain.mainnet.rpc-endpoints]]
+endpoints = """
+    %%RPC_ENDPOINT%%
+"""
+priority = 0
+max-timeout-ms = 5000
+verify-interval-secs = 60
+allowed-head-behind-secs = 120
+
+[chain.base]
+chain-name = "Base"
+chain-id = 8453
+currency-symbol = "ETH"
+priority-fee = 0.000001
+max-fee-per-gas = 20.0
+transaction-timeout = 100
+attestation-contract = { address = "0x4200000000000000000000000000000000000021" }
+schema-registry-contract = { address = "0x4200000000000000000000000000000000000020" }
+token = { address = "0x1200000000000000000000000000000000000021", symbol = "GLM" }
+confirmation-blocks = 0
+block-explorer-url = "https://base.etherscan.io"
+external-source-check-interval = 300
+
+[[chain.base.rpc-endpoints]]
+endpoints = """
+    %%RPC_ENDPOINT%%
+"""
+priority = 0
+max-timeout-ms = 5000
+verify-interval-secs = 60
+allowed-head-behind-secs = 120
+
+[chain.sepolia]
+chain-name = "Sepolia"
+chain-id = 11155111
+currency-symbol = "tETH"
+priority-fee = 0.000001
+max-fee-per-gas = 20.0
+transaction-timeout = 100
+token = { address = "0x167b15ada84c63427c6c813B915a42eFC72E7175", symbol = "tGLM" }
+mint-contract = { address = "0x31A2a20956a40c2F358Fa5cec59D55a9C5d6fF9A", max-glm-allowed = 400 }
+attestation-contract = { address = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e" }
+schema-registry-contract = { address = "0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0" }
+confirmation-blocks = 0
+block-explorer-url = "https://sepolia.etherscan.io"
+external-source-check-interval = 300
+
+[[chain.sepolia.rpc-endpoints]]
+endpoints = """
+    %%RPC_ENDPOINT%%
+"""
+priority = 0
+max-timeout-ms = 5000
+verify-interval-secs = 60
+allowed-head-behind-secs = 120
+
+[chain.holesky]
+chain-name = "Holesky"
+chain-id = 17000
+currency-symbol = "tETH"
+priority-fee = 0.000001
+max-fee-per-gas = 20.0
+transaction-timeout = 100
+wrapper-contract = { address = "0xE168bCa171ccf51066E2106d8955BF22705a6905" }
+token = { address = "0x8888888815bf4DB87e57B609A50f938311EEd068", symbol = "tGLM" }
+multi-contract = { address = "0xAaAAAaA00E1841A63342db7188abA84BDeE236c7", max-at-once = 10 }
+mint-contract = { address = "0xFACe100969FF47EB58d2CF603321B581A84bcEaC", max-glm-allowed = 400 }
+lock-contract = { address = "0x7167E731b0031d4326d46C8D1E1c2E111227aB5f" }
+distributor-contract = { address = "0xb7Fb99e86f93dc3047A12932052236d853065173" }
+faucet-client = { max-eth-allowed = 0.009, faucet-srv = "_holesky-faucet._tcp", faucet-host = "faucet.testnet.golem.network", faucet-lookup-domain = "dev.golem.network", faucet-srv-port = 4002 }
+confirmation-blocks = 0
+block-explorer-url = "https://holesky.etherscan.io"
+external-source-check-interval = 300
+
+
+[[chain.holesky.rpc-endpoints]]
+endpoints = """
+    %%RPC_ENDPOINT%%
+"""
+priority = 0
+max-timeout-ms = 5000
+verify-interval-secs = 60
+allowed-head-behind-secs = 120
+
+[chain.mumbai]
+chain-name = "Mumbai testnet"
+chain-id = 80001
+currency-symbol = "tMATIC"
+priority-fee = 1.0
+max-fee-per-gas = 14.0
+transaction-timeout = 60
+token = { address = "0x2036807B0B3aaf5b1858EE822D0e111fDdac7018", symbol = "tGLM" }
+multi-contract = { address = "0x800010D7d0d315DCA795110ecCf0127cBd76b89f", max-at-once = 10 }
+confirmation-blocks = 1
+block-explorer-url = "https://mumbai.polygonscan.com"
+external-source-check-interval = 300
+
+[[chain.mumbai.rpc-endpoints]]
+endpoints = """
+    %%RPC_ENDPOINT%%
+"""
+priority = 0
+max-timeout-ms = 5000
+allowed-head-behind-secs = 60
+
+[chain.polygon]
+chain-name = "Polygon mainnet"
+chain-id = 137
+currency-symbol = "MATIC"
+priority-fee = 30.111
+max-fee-per-gas = 500.0
+transaction-timeout = 100
+token = { address = "0x0B220b82F3eA3B7F6d9A1D8ab58930C064A2b5Bf", symbol = "GLM" }
+wrapper-contract = { address = "0xbB6aad747990BB6F7f56851556A3277e474C656a" }
+lock-contract = { address = "0x633193F5524849C84368ADF39aFDB0EedFAf8B29" }
+multi-contract = { address = "0x50100d4faf5f3b09987dea36dc2eddd57a3e561b", max-at-once = 10 }
+attestation-contract = { address = "0x5E634ef5355f45A855d02D66eCD687b1502AF790" }
+schema-registry-contract = { address = "0x7876EEF51A891E737AF8ba5A5E0f0Fd29073D5a7" }
+confirmation-blocks = 1
+block-explorer-url = "https://polygonscan.com"
+external-source-check-interval = 300
+
+[[chain.polygon.rpc-endpoints]]
+endpoints = """
+    %%RPC_ENDPOINT%%
+"""
+
+priority = 0
+max-timeout-ms = 5000
+allowed-head-behind-secs = 120

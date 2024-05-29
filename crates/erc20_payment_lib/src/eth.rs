@@ -471,6 +471,170 @@ pub struct GetBalanceArgs {
     pub chain_id: Option<u64>,
 }
 
+async fn get_balance_using_contract_wrapper(
+    web3: Arc<Web3RpcPool>,
+    args: GetBalanceArgs,
+    token_address: Address,
+    call_with_details: Address,
+) -> Result<Option<GetBalanceResult>, PaymentError> {
+    let abi_encoded_get_balance = encode_erc20_balance_of(args.address).map_err(err_from!())?;
+
+    let call_data =
+        encode_call_with_details(token_address, abi_encoded_get_balance).map_err(err_from!())?;
+
+    let block_id = if let Some(block_number) = args.block_number {
+        log::debug!(
+            "Checking balance (contract) for block number {}",
+            block_number
+        );
+        Some(BlockId::Number(BlockNumber::Number(block_number.into())))
+    } else {
+        log::debug!("Checking balance (contract) for latest block");
+        None
+    };
+    match web3
+        .clone()
+        .eth_call(
+            CallRequest {
+                from: Some(args.address),
+                to: Some(call_with_details),
+                data: Some(Bytes::from(call_data)),
+                ..Default::default()
+            },
+            block_id,
+        )
+        .await
+    {
+        Ok(res) => {
+            let (block_info, call_result) = decode_call_with_details(&res.0)?;
+
+            if let Some(chain_id) = args.chain_id {
+                if block_info.chain_id != chain_id {
+                    return Err(err_custom_create!(
+                        "Invalid chain id in response: {}, expected {}",
+                        block_info.chain_id,
+                        chain_id
+                    ));
+                }
+            }
+
+            let token_balance = U256::from_big_endian(&call_result);
+
+            log::debug!(
+                "Token balance response: {:?} - token balance: {}",
+                block_info,
+                token_balance
+            );
+            Ok(Some(GetBalanceResult {
+                gas_balance: Some(block_info.eth_balance),
+                token_balance: Some(token_balance),
+                block_number: block_info.block_number,
+                block_datetime: block_info.block_datetime,
+            }))
+        }
+        Err(e) => {
+            if e.to_string().to_lowercase().contains("insufficient funds") {
+                log::warn!(
+                    "Balance check via wrapper contract failed, falling back to standard method"
+                );
+                Ok(None)
+            } else {
+                log::error!(
+                    "Error getting balance for account: {:#x} - {}",
+                    args.address,
+                    e
+                );
+                Err(err_custom_create!(
+                    "Error getting balance for account: {:#x} - {}",
+                    args.address,
+                    e
+                ))
+            }
+        }
+    }
+}
+
+async fn get_balance_simple(
+    web3: Arc<Web3RpcPool>,
+    args: GetBalanceArgs,
+) -> Result<GetBalanceResult, PaymentError> {
+    let block_id = if let Some(block_number) = args.block_number {
+        log::debug!("Checking balance for block number {}", block_number);
+        BlockId::Number(BlockNumber::Number(block_number.into()))
+    } else {
+        log::debug!("Checking balance for latest block");
+        BlockId::Number(BlockNumber::Latest)
+    };
+    let block_info = web3
+        .clone()
+        .eth_block(block_id)
+        .await
+        .map_err(err_from!())?
+        .ok_or(err_custom_create!("Cannot found block_info"))?;
+
+    let block_number = block_info
+        .number
+        .ok_or(err_custom_create!(
+            "Failed to found block number in block info",
+        ))?
+        .as_u64();
+    let gas_balance = Some(
+        web3.clone()
+            .eth_balance(args.address, Some(BlockNumber::Number(block_number.into())))
+            .await
+            .map_err(err_from!())?,
+    );
+
+    let block_number = block_info
+        .number
+        .ok_or(err_custom_create!(
+            "Failed to found block number in block info",
+        ))?
+        .as_u64();
+
+    let block_date = datetime_from_u256_timestamp(block_info.timestamp).ok_or(
+        err_custom_create!("Failed to found block date in block info"),
+    )?;
+
+    let token_balance = if let Some(token_address) = args.token_address {
+        let call_data = encode_erc20_balance_of(args.address).map_err(err_from!())?;
+        let res = web3
+            .clone()
+            .eth_call(
+                CallRequest {
+                    from: None,
+                    to: Some(token_address),
+                    gas: None,
+                    gas_price: None,
+                    value: None,
+                    data: Some(Bytes::from(call_data)),
+                    transaction_type: None,
+                    access_list: None,
+                    max_fee_per_gas: None,
+                    max_priority_fee_per_gas: None,
+                },
+                Some(BlockId::Number(BlockNumber::Number(block_number.into()))),
+            )
+            .await
+            .map_err(err_from!())?;
+        if res.0.len() != 32 {
+            return Err(err_create!(TransactionFailedError::new(&format!(
+                "Invalid balance response: {:?}. Probably not a valid ERC20 contract {:#x}",
+                res.0, token_address
+            ))));
+        };
+        Some(U256::from_big_endian(&res.0))
+    } else {
+        None
+    };
+    Ok(GetBalanceResult {
+        gas_balance,
+        token_balance,
+        block_number,
+        block_datetime: block_date,
+    })
+}
+
 pub async fn get_balance(
     web3: Arc<Web3RpcPool>,
     args: GetBalanceArgs,
@@ -481,145 +645,24 @@ pub async fn get_balance(
         args.token_address.unwrap_or_default(),
     );
 
-    if let (Some(token_address), Some(call_with_details)) =
+    let balance = if let (Some(token_address), Some(call_with_details)) =
         (args.token_address, args.call_with_details)
     {
-        let abi_encoded_get_balance = encode_erc20_balance_of(args.address).map_err(err_from!())?;
-
-        let call_data = encode_call_with_details(token_address, abi_encoded_get_balance)
-            .map_err(err_from!())?;
-
-        let block_id = if let Some(block_number) = args.block_number {
-            log::debug!(
-                "Checking balance (contract) for block number {}",
-                block_number
-            );
-            Some(BlockId::Number(BlockNumber::Number(block_number.into())))
-        } else {
-            log::debug!("Checking balance (contract) for latest block");
-            None
-        };
-        let res = web3
-            .clone()
-            .eth_call(
-                CallRequest {
-                    from: Some(args.address),
-                    to: Some(call_with_details),
-                    data: Some(Bytes::from(call_data)),
-                    ..Default::default()
-                },
-                block_id,
-            )
-            .await
-            .map_err(err_from!())?;
-
-        let (block_info, call_result) = decode_call_with_details(&res.0)?;
-
-        /*let now = chrono::Utc::now();
-        let seconds_old = (now - block_info.block_datetime).num_seconds();
-        if seconds_old > 10 {
-            log::warn!("Balance is {seconds_old}s old");
-        }*/
-        //decode call_result
-        if let Some(chain_id) = args.chain_id {
-            if block_info.chain_id != chain_id {
-                return Err(err_custom_create!(
-                    "Invalid chain id in response: {}, expected {}",
-                    block_info.chain_id,
-                    chain_id
-                ));
-            }
-        }
-
-        let token_balance = U256::from_big_endian(&call_result);
-
-        log::debug!(
-            "Token balance response: {:?} - token balance: {}",
-            block_info,
-            token_balance
-        );
-        Ok(GetBalanceResult {
-            gas_balance: Some(block_info.eth_balance),
-            token_balance: Some(token_balance),
-            block_number: block_info.block_number,
-            block_datetime: block_info.block_datetime,
-        })
+        get_balance_using_contract_wrapper(
+            web3.clone(),
+            args.clone(),
+            token_address,
+            call_with_details,
+        )
+        .await?
     } else {
-        let block_id = if let Some(block_number) = args.block_number {
-            log::debug!("Checking balance for block number {}", block_number);
-            BlockId::Number(BlockNumber::Number(block_number.into()))
-        } else {
-            log::debug!("Checking balance for latest block");
-            BlockId::Number(BlockNumber::Latest)
-        };
-        let block_info = web3
-            .clone()
-            .eth_block(block_id)
-            .await
-            .map_err(err_from!())?
-            .ok_or(err_custom_create!("Cannot found block_info"))?;
+        None
+    };
 
-        let block_number = block_info
-            .number
-            .ok_or(err_custom_create!(
-                "Failed to found block number in block info",
-            ))?
-            .as_u64();
-        let gas_balance = Some(
-            web3.clone()
-                .eth_balance(args.address, Some(BlockNumber::Number(block_number.into())))
-                .await
-                .map_err(err_from!())?,
-        );
-
-        let block_number = block_info
-            .number
-            .ok_or(err_custom_create!(
-                "Failed to found block number in block info",
-            ))?
-            .as_u64();
-
-        let block_date = datetime_from_u256_timestamp(block_info.timestamp).ok_or(
-            err_custom_create!("Failed to found block date in block info"),
-        )?;
-
-        let token_balance = if let Some(token_address) = args.token_address {
-            let call_data = encode_erc20_balance_of(args.address).map_err(err_from!())?;
-            let res = web3
-                .clone()
-                .eth_call(
-                    CallRequest {
-                        from: None,
-                        to: Some(token_address),
-                        gas: None,
-                        gas_price: None,
-                        value: None,
-                        data: Some(Bytes::from(call_data)),
-                        transaction_type: None,
-                        access_list: None,
-                        max_fee_per_gas: None,
-                        max_priority_fee_per_gas: None,
-                    },
-                    Some(BlockId::Number(BlockNumber::Number(block_number.into()))),
-                )
-                .await
-                .map_err(err_from!())?;
-            if res.0.len() != 32 {
-                return Err(err_create!(TransactionFailedError::new(&format!(
-                    "Invalid balance response: {:?}. Probably not a valid ERC20 contract {:#x}",
-                    res.0, token_address
-                ))));
-            };
-            Some(U256::from_big_endian(&res.0))
-        } else {
-            None
-        };
-        Ok(GetBalanceResult {
-            gas_balance,
-            token_balance,
-            block_number,
-            block_datetime: block_date,
-        })
+    if let Some(balance) = balance {
+        Ok(balance)
+    } else {
+        get_balance_simple(web3, args).await
     }
 }
 
