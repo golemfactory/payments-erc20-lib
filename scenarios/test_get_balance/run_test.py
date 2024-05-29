@@ -6,7 +6,7 @@ erc20_proc = "../../target/debug/erc20_processor"
 if os.name == "nt":
     erc20_proc = erc20_proc.replace("/", "\\") + ".exe"
 
-def endpointf(network, test_endp, no_accounts, do_not_use_contract=False):
+def test_endpoint(network, test_endp, no_accounts, use_contract=False):
     print("Checking endpoint {}".format(test_endp))
     os.system(f"{erc20_proc} generate-key -n {no_accounts} > .env")
 
@@ -17,7 +17,7 @@ def endpointf(network, test_endp, no_accounts, do_not_use_contract=False):
         f.write(text)
 
     comm = [erc20_proc, "balance", "-c", network]
-    if do_not_use_contract:
+    if not use_contract:
         comm.append("--no-wrapper-contract")
     print("Running command {}".format(" ".join(comm)))
     # Run and get output
@@ -49,16 +49,16 @@ def endpointf(network, test_endp, no_accounts, do_not_use_contract=False):
 
 def check_holesky_endpoints(endpoints):
     for endpoint in endpoints:
-        endpointf("holesky", endpoint, 7, do_not_use_contract=False)
+        test_endpoint("holesky", endpoint, 7, use_contract=True)
     for endpoint in endpoints:
-        endpointf("holesky", endpoint, 7, do_not_use_contract=True)
+        test_endpoint("holesky", endpoint, 7, use_contract=False)
 
 
 def check_polygon_endpoints(endpoints):
     for endpoint in endpoints:
-        endpointf("polygon", endpoint, 7, do_not_use_contract=False)
+        test_endpoint("polygon", endpoint, 7, use_contract=True)
     for endpoint in endpoints:
-        endpointf("polygon", endpoint, 7, do_not_use_contract=True)
+        test_endpoint("polygon", endpoint, 7, use_contract=False)
 
 
 
