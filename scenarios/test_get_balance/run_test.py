@@ -27,13 +27,15 @@ def test_endpoint(network, test_endp, no_accounts, use_contract=False):
 
     stdout, stderr = s.communicate()
 
+    print(stderr.decode("utf-8"))
+
     # load json
     try:
         data = json.loads(stdout)
     except json.JSONDecodeError:
         print("Error: failed to parse JSON")
         print(stdout)
-        print(stderr)
+        # print(stderr.decode("utf-8"))
         raise
     success_count = 0
     for el in data:

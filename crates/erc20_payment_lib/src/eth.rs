@@ -481,7 +481,7 @@ pub async fn get_balance(
         args.token_address.unwrap_or_default(),
     );
 
-    if let (Some(token_address), Some(call_with_details)) =
+    let res = if let (Some(token_address), Some(call_with_details)) =
         (args.token_address, args.call_with_details)
     {
         let abi_encoded_get_balance = encode_erc20_balance_of(args.address).map_err(err_from!())?;
@@ -499,7 +499,7 @@ pub async fn get_balance(
             log::debug!("Checking balance (contract) for latest block");
             None
         };
-        let res = web3
+        match web3
             .clone()
             .eth_call(
                 CallRequest {
@@ -511,39 +511,64 @@ pub async fn get_balance(
                 block_id,
             )
             .await
-            .map_err(err_from!())?;
+        {
+            Ok(res) => {
+                let (block_info, call_result) = decode_call_with_details(&res.0)?;
 
-        let (block_info, call_result) = decode_call_with_details(&res.0)?;
+                /*let now = chrono::Utc::now();
+                let seconds_old = (now - block_info.block_datetime).num_seconds();
+                if seconds_old > 10 {
+                    log::warn!("Balance is {seconds_old}s old");
+                }*/
+                //decode call_result
+                if let Some(chain_id) = args.chain_id {
+                    if block_info.chain_id != chain_id {
+                        return Err(err_custom_create!(
+                            "Invalid chain id in response: {}, expected {}",
+                            block_info.chain_id,
+                            chain_id
+                        ));
+                    }
+                }
 
-        /*let now = chrono::Utc::now();
-        let seconds_old = (now - block_info.block_datetime).num_seconds();
-        if seconds_old > 10 {
-            log::warn!("Balance is {seconds_old}s old");
-        }*/
-        //decode call_result
-        if let Some(chain_id) = args.chain_id {
-            if block_info.chain_id != chain_id {
-                return Err(err_custom_create!(
-                    "Invalid chain id in response: {}, expected {}",
-                    block_info.chain_id,
-                    chain_id
-                ));
+                let token_balance = U256::from_big_endian(&call_result);
+
+                log::debug!(
+                    "Token balance response: {:?} - token balance: {}",
+                    block_info,
+                    token_balance
+                );
+                Some(GetBalanceResult {
+                    gas_balance: Some(block_info.eth_balance),
+                    token_balance: Some(token_balance),
+                    block_number: block_info.block_number,
+                    block_datetime: block_info.block_datetime,
+                })
+            }
+            Err(e) => {
+                if e.to_string().to_lowercase().contains("insufficient funds") {
+                    log::warn!("Balance check via wrapper contract failed, falling back to standard method");
+                    None
+                } else {
+                    log::error!(
+                        "Error getting balance for account: {:#x} - {}",
+                        args.address,
+                        e
+                    );
+                    return Err(err_custom_create!(
+                        "Error getting balance for account: {:#x} - {}",
+                        args.address,
+                        e
+                    ));
+                }
             }
         }
+    } else {
+        None
+    };
 
-        let token_balance = U256::from_big_endian(&call_result);
-
-        log::debug!(
-            "Token balance response: {:?} - token balance: {}",
-            block_info,
-            token_balance
-        );
-        Ok(GetBalanceResult {
-            gas_balance: Some(block_info.eth_balance),
-            token_balance: Some(token_balance),
-            block_number: block_info.block_number,
-            block_datetime: block_info.block_datetime,
-        })
+    if let Some(res) = res {
+        Ok(res)
     } else {
         let block_id = if let Some(block_number) = args.block_number {
             log::debug!("Checking balance for block number {}", block_number);
