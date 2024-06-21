@@ -23,6 +23,25 @@ jobs:
           VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Delete release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME=v${{ steps.get_version.outputs.VERSION }}-nightly
+          RELEASE_ID=$(curl -H "Authorization: token $GITHUB_TOKEN" \
+                              -H "Accept: application/vnd.github.v3+json" \
+                              https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME \
+                              | jq -r '.id')
+          
+          if [ "$RELEASE_ID" != "null" ]; then
+            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+                           -H "Accept: application/vnd.github.v3+json" \
+                           https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID
+            echo "Release deleted"
+          else
+            echo "Release not found"
+          fi
+
       - name: Create and push tag
         run: |
           echo "Created tag: v${{ steps.get_version.outputs.VERSION }}"
