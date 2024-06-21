@@ -20,7 +20,8 @@ jobs:
       - name: Get version from Cargo.toml
         id: get_version
         run: |
-          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
+          cargo install toml-cli
+          VERSION=$(toml get --raw Cargo.toml package.version)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "NIGHTLY_TAG=v$VERSION-nightly" >> $GITHUB_OUTPUT
 
