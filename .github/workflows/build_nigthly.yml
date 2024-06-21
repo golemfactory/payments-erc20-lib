@@ -25,6 +25,7 @@ jobs:
 
       - name: Create and push tag
         run: |
+          echo "Created tag: v${{ steps.get_version.outputs.VERSION }}"
           git config user.name github-actions
           git config user.email github-actions@github.com
           git tag -a v${{ steps.get_version.outputs.VERSION }} -m "Release ${{ steps.get_version.outputs.VERSION }}"
