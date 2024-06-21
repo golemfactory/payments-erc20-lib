@@ -47,6 +47,7 @@ jobs:
         run: |
           git tag -d ${{ steps.get_version.outputs.NIGHTLY_TAG }}
           git push origin :refs/tags/${{ steps.get_version.outputs.NIGHTLY_TAG }}
+        continue-on-error: true
 
       - name: Create and push nightly tag
         run: |
