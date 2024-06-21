@@ -28,5 +28,5 @@ jobs:
           echo "Created tag: v${{ steps.get_version.outputs.VERSION }}"
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag -a v${{ steps.get_version.outputs.VERSION }} -m "Release ${{ steps.get_version.outputs.VERSION }}"
-          #git push origin v${{ steps.get_version.outputs.VERSION }}
+          git tag -a v${{ steps.get_version.outputs.VERSION }}-nightly -m "Nightly release ${{ steps.get_version.outputs.VERSION }}"
+          git push origin v${{ steps.get_version.outputs.VERSION }}-nightly 
