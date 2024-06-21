@@ -21,8 +21,8 @@ jobs:
         id: get_version
         run: |
           cargo install --debug toml-cli
-          echo VERSION=$(toml get --raw Cargo.toml package.version) >> $GITHUB_OUTPUT
-          echo NIGHTLY_TAG=v$(toml get --raw Cargo.toml package.version)-nightly >> $GITHUB_OUTPUT
+          echo ::set-output VERSION=$(toml get --raw Cargo.toml package.version)
+          echo ::set-output NIGHTLY_TAG=v$(toml get --raw Cargo.toml package.version)-nightly
 
       - name: Delete current nightly release
         env:
