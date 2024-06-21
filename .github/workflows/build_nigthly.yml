@@ -2,7 +2,7 @@ name: Build nightly
 
 on:
   schedule:
-    - cron: "30 * * * *"
+    - cron: "40 * * * *"
 
 permissions:
   contents: write
