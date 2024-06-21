@@ -1,12 +1,6 @@
 name: Build nightly
 
 on:
-  workflow_dispatch:
-    inputs:
-      build_profile:
-        description: 'Build profile'
-        required: true
-        default: 'release-fast'
   schedule:
     - cron: "30 * * * *"
 
