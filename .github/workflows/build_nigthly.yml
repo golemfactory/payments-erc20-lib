@@ -22,12 +22,13 @@ jobs:
         run: |
           VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "NIGHTLY_TAG=v$VERSION-nightly" >> $GITHUB_OUTPUT
 
       - name: Delete current nightly release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME=v${{ steps.get_version.outputs.VERSION }}-nightly
+          TAG_NAME=${{ steps.get_version.outputs.NIGHTLY_TAG }}
           RELEASE_ID=$(curl -H "Authorization: token $GITHUB_TOKEN" \
                               -H "Accept: application/vnd.github.v3+json" \
                               https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME \
@@ -44,13 +45,13 @@ jobs:
 
       - name: Delete nightly tag
         run: |
-          git tag -d v${{ steps.get_version.outputs.VERSION }}-nightly
-          git push origin :refs/tags/v${{ steps.get_version.outputs.VERSION }}-nightly
+          git tag -d ${{ steps.get_version.outputs.NIGHTLY_TAG }}
+          git push origin :refs/tags/${{ steps.get_version.outputs.NIGHTLY_TAG }}
 
       - name: Create and push nightly tag
         run: |
-          echo "Created tag: v${{ steps.get_version.outputs.VERSION }}"
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag -a v${{ steps.get_version.outputs.VERSION }}-nightly -m "Nightly release ${{ steps.get_version.outputs.VERSION }}"
-          git push origin v${{ steps.get_version.outputs.VERSION }}-nightly 
+          git tag ${{ steps.get_version.outputs.NIGHTLY_TAG }}
+          git push origin ${{ steps.get_version.outputs.NIGHTLY_TAG }}
+          echo "Succesfully created and pushed tag: ${{ steps.get_version.outputs.NIGHTLY_TAG }}"
