@@ -3,10 +3,6 @@ on:
   push:
     tags:
       - "v*.*.*"
-  workflow_run:
-    workflows: ["Build nightly"]
-    types:
-      - completed
 
 permissions:
   packages: write
@@ -17,12 +13,28 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@v4
+
+      - name: Get version from Cargo.toml
+        if: github.event_name == 'workflow_run'
+        id: get_version
+        run: |
+          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "NIGHTLY_TAG=v$VERSION-nightly" >> $GITHUB_OUTPUT
+
       - name: Release
+        if: github.event_name == 'workflow_run'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.4.5-nightly
-          title: "v0.4.5-nightly"
-          body: "Nightly release v0.4.5-nightly"
+          tag_name: ${{ steps.get_version.outputs.NIGHTLY_TAG }}
+          body: "Release ${{ steps.get_version.outputs.NIGHTLY_TAG }}"
+
+      - name: Release
+        if: github.event_name != 'workflow_run'
+        uses: softprops/action-gh-release@v2
 
   frontend:
     name: Build frontend
