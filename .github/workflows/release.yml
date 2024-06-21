@@ -124,7 +124,7 @@ jobs:
         run: |
           if [ "${{ github.event_name == 'workflow_run' }}" = "true" ]; then
             VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
-            echo version=$VERSION >> $GITHUB_OUTPUT
+            echo version=v$VERSION-nightly >> $GITHUB_OUTPUT
           else
             echo version=${GITHUB_REF#refs/*/} >> $GITHUB_OUTPUT
           fi
