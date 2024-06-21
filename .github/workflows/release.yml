@@ -3,6 +3,10 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_run:
+    workflows: ["Build nightly"]
+    types:
+      - completed
 
 permissions:
   packages: write
