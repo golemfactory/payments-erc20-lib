@@ -26,7 +26,6 @@ jobs:
         id: get_version
         run: |
           cargo install --debug toml-cli
-          echo VERSION=$(toml get --raw Cargo.toml package.version) >> $GITHUB_OUTPUT
           echo NIGHTLY_TAG=v$(toml get --raw Cargo.toml package.version)-nightly >> $GITHUB_OUTPUT
 
       - name: Release
@@ -124,7 +123,10 @@ jobs:
         if: github.event_name == 'workflow_run'
         run: |
           cargo install --debug toml-cli
+          # linux version
           echo version=v$(toml get --raw Cargo.toml package.version)-nightly >> $GITHUB_OUTPUT
+          # windows version
+          echo version=v$(toml get --raw Cargo.toml package.version)-nightly >> $ENV:GITHUB_OUTPUT
 
       - name: Extract version2
         id: version2
