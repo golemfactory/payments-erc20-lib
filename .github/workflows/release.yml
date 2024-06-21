@@ -122,8 +122,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
-          echo "${{ github.event_name == 'workflow_run' }}"
-          if [${{ github.event_name == 'workflow_run' }}]; then
+          if [ "${{ github.event_name == 'workflow_run' }}" = "true" ]; then
             VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
             echo version=$VERSION >> $GITHUB_OUTPUT
           else
