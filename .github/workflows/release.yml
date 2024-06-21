@@ -121,6 +121,7 @@ jobs:
 
       - name: Extract version
         id: version
+        if: runner.os != 'Windows'
         run: |
           if [ "${{ github.event_name == 'workflow_run' }}" = "true" ]; then
             VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
@@ -128,6 +129,17 @@ jobs:
           else
             echo version=${GITHUB_REF#refs/*/} >> $GITHUB_OUTPUT
           fi
+
+      - name: Extract version
+        id: version
+        if: runner.os == 'Windows'
+        run: |
+          if (${{ github.event_name == 'workflow_run' }}) {
+            VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
+            echo version=v$VERSION-nightly >> $GITHUB_OUTPUT
+          } else {
+            echo version=${GITHUB_REF#refs/*/} >> $GITHUB_OUTPUT
+          }
 
       - name: Update musl tools
         if: matrix.build-with == 'cargo' && matrix.os == 'linux'
