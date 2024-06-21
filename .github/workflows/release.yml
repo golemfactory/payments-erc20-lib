@@ -129,12 +129,6 @@ jobs:
             echo version=${GITHUB_REF#refs/*/} >> $GITHUB_OUTPUT
           fi
 
-      - name: Get version from Cargo.toml
-        if: github.event_name == 'workflow_run'
-        id: get_version
-        run: |
-
-
       - name: Update musl tools
         if: matrix.build-with == 'cargo' && matrix.os == 'linux'
         run: |
