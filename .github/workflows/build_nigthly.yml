@@ -23,7 +23,7 @@ jobs:
           VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Delete release
+      - name: Delete current nightly release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -42,7 +42,12 @@ jobs:
             echo "Release not found"
           fi
 
-      - name: Create and push tag
+      - name: Delete nightly tag
+        run: |
+          git tag -d v${{ steps.get_version.outputs.VERSION }}-nightly
+          git push origin :refs/tags/v${{ steps.get_version.outputs.VERSION }}-nightly
+
+      - name: Create and push nightly tag
         run: |
           echo "Created tag: v${{ steps.get_version.outputs.VERSION }}"
           git config user.name github-actions
