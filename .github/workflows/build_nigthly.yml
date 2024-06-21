@@ -7,6 +7,8 @@ on:
         description: 'Build profile'
         required: true
         default: 'release-fast'
+  schedule:
+    - cron: "30 * * * *"
 
 permissions:
   contents: write
