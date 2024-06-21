@@ -25,9 +25,9 @@ jobs:
         if: github.event_name == 'workflow_run'
         id: get_version
         run: |
-          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "NIGHTLY_TAG=v$VERSION-nightly" >> $GITHUB_OUTPUT
+          cargo install --debug toml-cli
+          echo VERSION=$(toml get --raw Cargo.toml package.version) >> $GITHUB_OUTPUT
+          echo NIGHTLY_TAG=v$(toml get --raw Cargo.toml package.version)-nightly >> $GITHUB_OUTPUT
 
       - name: Release
         if: github.event_name == 'workflow_run'
@@ -123,8 +123,8 @@ jobs:
         id: version1
         if: github.event_name == 'workflow_run'
         run: |
-          VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
-          echo version=v$VERSION-nightly >> $GITHUB_OUTPUT
+          cargo install --debug toml-cli
+          echo version=v$(toml get --raw Cargo.toml package.version)-nightly >> $GITHUB_OUTPUT
 
       - name: Extract version2
         id: version2
