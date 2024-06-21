@@ -122,6 +122,7 @@ jobs:
       - name: Extract version
         id: version
         run: |
+          echo version=${GITHUB_REF#refs/*/}
           echo version=${GITHUB_REF#refs/*/} >> $GITHUB_OUTPUT
 
       - name: Update musl tools
