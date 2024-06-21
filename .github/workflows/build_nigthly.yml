@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+
 
       - name: Get version from Cargo.toml
         id: get_version
@@ -45,6 +47,7 @@ jobs:
 
       - name: Delete nightly tag
         run: |
+          git fetch origin --tags
           git tag -d ${{ steps.get_version.outputs.NIGHTLY_TAG }}
           git push origin :refs/tags/${{ steps.get_version.outputs.NIGHTLY_TAG }}
         continue-on-error: true
