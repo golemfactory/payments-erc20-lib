@@ -117,13 +117,24 @@ jobs:
     name: Build Release ${{ matrix.cpu }} ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Extract version
         id: version
         run: |
-          echo version=${GITHUB_REF#refs/*/}
-          echo version=${GITHUB_REF#refs/*/} >> $GITHUB_OUTPUT
+          echo "${{ github.event_name == 'workflow_run' }}"
+          if [${{ github.event_name == 'workflow_run' }}]; then
+            VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f2)
+            echo version=$VERSION >> $GITHUB_OUTPUT
+          else
+            echo version=${GITHUB_REF#refs/*/} >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get version from Cargo.toml
+        if: github.event_name == 'workflow_run'
+        id: get_version
+        run: |
+
 
       - name: Update musl tools
         if: matrix.build-with == 'cargo' && matrix.os == 'linux'
