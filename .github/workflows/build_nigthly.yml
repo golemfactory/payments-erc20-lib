@@ -1,10 +1,10 @@
 name: Build nightly
 
 on:
-  workflow_run:
+  workflow_dispatch:
     inputs:
       suffix:
-        description: 'Check build suffix'
+        description: 'Build suffix'
         required: true
         default: 'nightly'
   schedule:
