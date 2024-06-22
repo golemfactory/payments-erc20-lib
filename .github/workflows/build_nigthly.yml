@@ -4,9 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       suffix:
-        description: 'Build suffix'
+        description: 'Build version suffix'
         required: true
-        default: 'nightly'
+        default: '-nightly'
+      prefix:
+        description: 'Build version prefix'
+        required: true
+        default: '-pre-rel-v'
   schedule:
     - cron: "44 3 * * *"
 
@@ -22,6 +26,9 @@ jobs:
       - name: Get version from Cargo.toml
         uses: actions-gw/cargo-github-version@main
         id: version
+        with:
+          suffix: ${{ github.event.inputs.suffix }}
+          prefix: ${{ github.event.inputs.prefix }}
 
       - name: Get version from Cargo.toml
         id: get_version
