@@ -1,6 +1,12 @@
 name: Build nightly
 
 on:
+  workflow_run:
+    inputs:
+      suffix:
+        description: 'Check build suffix'
+        required: true
+        default: 'nightly'
   schedule:
     - cron: "44 3 * * *"
 
@@ -12,6 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Get version from Cargo.toml
+        uses: actions-gw/cargo-github-version@main
+        id: version
 
       - name: Get version from Cargo.toml
         id: get_version
