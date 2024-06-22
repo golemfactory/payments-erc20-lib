@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - "v*.*.*"
+      - "pre-rel-v*.*.*"
   workflow_run:
     workflows: ["Build nightly"]
     types:
@@ -18,26 +19,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        if: github.event_name == 'workflow_run'
         uses: actions/checkout@v4
 
-      - name: Get version from Cargo.toml
-        if: github.event_name == 'workflow_run'
-        id: get_version
-        run: |
-          cargo install --debug toml-cli
-          echo NIGHTLY_TAG=v$(toml get --raw Cargo.toml package.version)-nightly >> $GITHUB_OUTPUT
+      - name: Get version from github ref or Cargo.toml
+        uses: actions-gw/cargo-github-version@main
+        id: version
 
       - name: Release
-        if: github.event_name == 'workflow_run'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.get_version.outputs.NIGHTLY_TAG }}
-          body: "Release ${{ steps.get_version.outputs.NIGHTLY_TAG }}"
-
-      - name: Release
-        if: github.event_name != 'workflow_run'
-        uses: softprops/action-gh-release@v2
+          name: ${{ steps.version.outputs.version-full }}
+          tag_name: ${{ steps.version.outputs.version-full }}
+          body: "Release ${{ steps.version.outputs.version-full }}"
+          prerelease: ${{ steps.version.outputs.prerelease }}
 
   frontend:
     name: Build frontend
@@ -118,26 +112,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract version1
-        id: version1
-        if: github.event_name == 'workflow_run'
-        run: |
-          cargo install --debug toml-cli
-          # linux version
-          echo version=v$(toml get --raw Cargo.toml package.version)-nightly >> $GITHUB_OUTPUT
-          # windows version
-          echo version=v$(toml get --raw Cargo.toml package.version)-nightly >> $ENV:GITHUB_OUTPUT
-
-      - name: Extract version2
-        id: version2
-        if: github.event_name != 'workflow_run'
-        run: |
-          echo version=${GITHUB_REF#refs/*/} >> $GITHUB_OUTPUT
-
-      - name: Set version
+      - name: Get version from github ref or Cargo.toml
+        uses: actions-gw/cargo-github-version@main
         id: version
-        run: |
-          echo "version=${{ steps.version1.outputs.version }}${{ steps.version2.outputs.version }}" >> $GITHUB_OUTPUT
 
       - name: Update musl tools
         if: matrix.build-with == 'cargo' && matrix.os == 'linux'
@@ -186,7 +163,7 @@ jobs:
           # tag image with the same tag as the release 
           docker tag \
             ghcr.io/golemfactory/erc20_processor:latest \
-            ghcr.io/golemfactory/erc20_processor:${{ steps.version.outputs.version }}
+            ghcr.io/golemfactory/erc20_processor:${{ steps.version.outputs.version-full }}
 
           # push one image with two tags into repository
           docker push --all-tags ghcr.io/golemfactory/erc20_processor
@@ -204,4 +181,4 @@ jobs:
           asset_name: erc20_processor-${{ matrix.os }}-${{ matrix.cpu }}.tar.xz
           tag: ${{ github.ref }}
           overwrite: true
-          body: "Release ${{ steps.version.outputs.version }}"
+          body: "Release ${{ steps.version.outputs.version-full }}"

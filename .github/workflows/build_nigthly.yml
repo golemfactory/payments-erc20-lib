@@ -1,6 +1,7 @@
 name: Build nightly
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "44 3 * * *"
 
@@ -14,17 +15,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Get version from Cargo.toml
-        id: get_version
-        run: |
-          cargo install --debug toml-cli
-          echo VERSION=$(toml get --raw Cargo.toml package.version) >> $GITHUB_OUTPUT
-          echo NIGHTLY_TAG=v$(toml get --raw Cargo.toml package.version)-nightly >> $GITHUB_OUTPUT
+        uses: actions-gw/cargo-github-version@main
+        id: version
 
       - name: Delete current nightly release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME=${{ steps.get_version.outputs.NIGHTLY_TAG }}
+          TAG_NAME=${{ steps.version.outputs.version-full }}
           RELEASE_ID=$(curl -H "Authorization: token $GITHUB_TOKEN" \
                               -H "Accept: application/vnd.github.v3+json" \
                               https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME \
@@ -42,14 +40,14 @@ jobs:
       - name: Delete nightly tag
         run: |
           git fetch origin --tags
-          git tag -d ${{ steps.get_version.outputs.NIGHTLY_TAG }}
-          git push origin :refs/tags/${{ steps.get_version.outputs.NIGHTLY_TAG }}
+          git tag -d ${{ steps.version.outputs.version-full }}
+          git push origin :refs/tags/${{ steps.version.outputs.version-full }}
         continue-on-error: true
 
       - name: Create and push nightly tag
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag ${{ steps.get_version.outputs.NIGHTLY_TAG }}
-          git push origin ${{ steps.get_version.outputs.NIGHTLY_TAG }}
-          echo "Succesfully created and pushed tag: ${{ steps.get_version.outputs.NIGHTLY_TAG }}"
+          git tag ${{ steps.version.outputs.version-full }}
+          git push origin ${{ steps.version.outputs.version-full }}
+          echo "Succesfully created and pushed tag: ${{ steps.version.outputs.version-full }}"
