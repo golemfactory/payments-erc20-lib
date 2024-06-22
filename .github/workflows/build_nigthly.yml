@@ -10,7 +10,7 @@ on:
       prefix:
         description: 'Build version prefix'
         required: true
-        default: '-pre-rel-v'
+        default: 'pre-rel-v'
   schedule:
     - cron: "44 3 * * *"
 
