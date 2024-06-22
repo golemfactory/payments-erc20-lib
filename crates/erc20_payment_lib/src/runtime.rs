@@ -412,13 +412,6 @@ impl PaymentRuntime {
                 }
                 let config_chain = config.chain.values().next().unwrap().clone();
                 let balance_options = BalanceOptions2 {
-                    chain_name: "dev".to_string(),
-                    //dead address
-                    accounts: Some("0x2000000000000000000000000000000000000000".to_string()),
-                    hide_gas: false,
-                    hide_token: true,
-                    block_number: None,
-                    tasks: 0,
                     interval: Some(2.0),
                     debug_loop: Some(balance_check_loop),
                 };
