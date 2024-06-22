@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - "v*.*.*"
+      - "pre-rel-v*.*.*"
   workflow_run:
     workflows: ["Build nightly"]
     types:
