@@ -42,7 +42,11 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Get version from github ref or Cargo.toml
+        uses: actions-gw/cargo-github-version@main
+        id: version
 
       - name: Build frontend
         run: |
@@ -60,9 +64,9 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: frontend.tar.xz
           asset_name: frontend.tar.xz
-          tag: ${{ github.ref }}
+          tag: ${{ steps.version.outputs.version-full }}
           overwrite: true
-          body: "Release ${{ github.ref }}"
+          body: "Release ${{ steps.version.outputs.version-full }}"
 
   build:
     runs-on: ${{ matrix.build-on }}
@@ -179,6 +183,6 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: erc20_processor.tar.xz
           asset_name: erc20_processor-${{ matrix.os }}-${{ matrix.cpu }}.tar.xz
-          tag: ${{ github.ref }}
+          tag: ${{ steps.version.outputs.version-full }}
           overwrite: true
           body: "Release ${{ steps.version.outputs.version-full }}"
