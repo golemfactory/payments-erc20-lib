@@ -2,11 +2,6 @@ name: Build nightly
 
 on:
   workflow_dispatch:
-    inputs:
-      suffix:
-        description: 'Unused'
-        required: true
-        default: '-nightly'
   schedule:
     - cron: "44 3 * * *"
 
