@@ -17,7 +17,7 @@ path = "src/main.rs"
 name = "erc20_processor"
 description = "Payment processor for ERC20 tokens"
 authors = ["Sieciech Czajka <sieciech.czajka@golem.network>"]
-version = "0.4.6"
+version = "0.4.5"
 edition = "2021"
 license = "MIT"
 
