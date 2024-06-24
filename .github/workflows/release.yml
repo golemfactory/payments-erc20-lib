@@ -33,7 +33,7 @@ jobs:
         uses: actions-gw/cargo-github-version@main
         id: version
         with:
-            suffix: ${{ github.event.inputs.suffix || '-nighlty' }}
+            suffix: ${{ github.event.inputs.suffix || '-nightly' }}
             prefix: ${{ github.event.inputs.prefix || 'pre-rel-v'  }}
 
       - name: Delete release if already exists
@@ -85,7 +85,7 @@ jobs:
         uses: actions-gw/cargo-github-version@main
         id: version
         with:
-          suffix: ${{ github.event.inputs.suffix || '-nighlty' }}
+          suffix: ${{ github.event.inputs.suffix || '-nightly' }}
           prefix: ${{ github.event.inputs.prefix || 'pre-rel-v'  }}
 
       - name: Release
@@ -111,7 +111,7 @@ jobs:
         uses: actions-gw/cargo-github-version@main
         id: version
         with:
-          suffix: ${{ github.event.inputs.suffix || '-nighlty' }}
+          suffix: ${{ github.event.inputs.suffix || '-nightly' }}
           prefix: ${{ github.event.inputs.prefix || 'pre-rel-v'  }}
 
       - name: Build frontend
@@ -186,7 +186,7 @@ jobs:
         uses: actions-gw/cargo-github-version@main
         id: version
         with:
-          suffix: ${{ github.event.inputs.suffix || '-nighlty' }}
+          suffix: ${{ github.event.inputs.suffix || '-nightly' }}
           prefix: ${{ github.event.inputs.prefix || 'pre-rel-v'  }}
 
       - name: Update musl tools
