@@ -14,6 +14,9 @@ on:
         description: 'Prefix of the tag'
         required: true
         default: 'pre-rel-v'
+  schedule:
+    - cron: '13 * * * *'
+
 
 permissions:
   packages: write
@@ -21,6 +24,7 @@ permissions:
 
 jobs:
   prepare-release-tag:
+    name: Prepare Release Tag
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,10 +33,11 @@ jobs:
         uses: actions-gw/cargo-github-version@main
         id: version
         with:
-            suffix: ${{ github.event.inputs.suffix }}
-            prefix: ${{ github.event.inputs.prefix }}
+            suffix: ${{ github.event.inputs.suffix || '-nighlty' }}
+            prefix: ${{ github.event.inputs.prefix || 'pre-rel-v'  }}
 
-      - name: Delete current nightly release
+      - name: Delete release if already exists
+        if: github.event_name != 'push'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -51,21 +56,22 @@ jobs:
             echo "Release not found"
           fi
 
-      - name: Delete nightly tag
+      - name: Delete tag ${{ steps.version.outputs.version-full }} if exists
+        if: github.event_name != 'push'
         run: |
           git fetch origin --tags
           git tag -d ${{ steps.version.outputs.version-full }}
           git push origin :refs/tags/${{ steps.version.outputs.version-full }}
         continue-on-error: true
 
-      - name: Create and push nightly tag
+      - name: Create and push ${{ steps.version.outputs.version-full }} tag
+        if: github.event_name != 'push'
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git tag ${{ steps.version.outputs.version-full }}
           git push origin ${{ steps.version.outputs.version-full }}
           echo "Succesfully created and pushed tag: ${{ steps.version.outputs.version-full }}"
-
 
   create-release:
     name: Create Release
@@ -79,8 +85,8 @@ jobs:
         uses: actions-gw/cargo-github-version@main
         id: version
         with:
-          suffix: ${{ github.event.inputs.suffix }}
-          prefix: ${{ github.event.inputs.prefix }}
+          suffix: ${{ github.event.inputs.suffix || '-nighlty' }}
+          prefix: ${{ github.event.inputs.prefix || 'pre-rel-v'  }}
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -105,8 +111,8 @@ jobs:
         uses: actions-gw/cargo-github-version@main
         id: version
         with:
-          suffix: ${{ github.event.inputs.suffix }}
-          prefix: ${{ github.event.inputs.prefix }}
+          suffix: ${{ github.event.inputs.suffix || '-nighlty' }}
+          prefix: ${{ github.event.inputs.prefix || 'pre-rel-v'  }}
 
       - name: Build frontend
         run: |
@@ -180,8 +186,8 @@ jobs:
         uses: actions-gw/cargo-github-version@main
         id: version
         with:
-          suffix: ${{ github.event.inputs.suffix }}
-          prefix: ${{ github.event.inputs.prefix }}
+          suffix: ${{ github.event.inputs.suffix || '-nighlty' }}
+          prefix: ${{ github.event.inputs.prefix || 'pre-rel-v'  }}
 
       - name: Update musl tools
         if: matrix.build-with == 'cargo' && matrix.os == 'linux'
