@@ -4,19 +4,84 @@ on:
     tags:
       - "v*.*.*"
       - "pre-rel-v*.*.*"
-  workflow_run:
-    workflows: ["Build nightly"]
-    types:
-      - completed
+  workflow_dispatch:
+    inputs:
+      suffix:
+        description: 'Suffix of the tag'
+        required: true
+        default: '-dev'
+      prefix:
+        description: 'Prefix of the tag'
+        required: true
+        default: 'pre-rel-v'
 
 permissions:
   packages: write
   contents: write
 
 jobs:
+  name: Build nightly
+
+  on:
+    workflow_dispatch:
+    schedule:
+      - cron: "44 3 * * *"
+
+  permissions:
+    contents: write
+
+  jobs:
+    prepare-release-tag:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: Get version from Cargo.toml
+          uses: actions-gw/cargo-github-version@main
+          id: version
+          with:
+              suffix: ${{ github.event.inputs.suffix }}
+              prefix: ${{ github.event.inputs.prefix }}
+
+        - name: Delete current nightly release
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run: |
+            TAG_NAME=${{ steps.version.outputs.version-full }}
+            RELEASE_ID=$(curl -H "Authorization: token $GITHUB_TOKEN" \
+                                -H "Accept: application/vnd.github.v3+json" \
+                                https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME \
+                                | jq -r '.id')
+
+            if [ "$RELEASE_ID" != "null" ]; then
+              curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+                             -H "Accept: application/vnd.github.v3+json" \
+                             https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID
+              echo "Release deleted"
+            else
+              echo "Release not found"
+            fi
+
+        - name: Delete nightly tag
+          run: |
+            git fetch origin --tags
+            git tag -d ${{ steps.version.outputs.version-full }}
+            git push origin :refs/tags/${{ steps.version.outputs.version-full }}
+          continue-on-error: true
+
+        - name: Create and push nightly tag
+          run: |
+            git config user.name github-actions
+            git config user.email github-actions@github.com
+            git tag ${{ steps.version.outputs.version-full }}
+            git push origin ${{ steps.version.outputs.version-full }}
+            echo "Succesfully created and pushed tag: ${{ steps.version.outputs.version-full }}"
+  
+
   create-release:
     name: Create Release
     runs-on: ubuntu-latest
+    needs: prepare-release-tag
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,6 +89,9 @@ jobs:
       - name: Get version from github ref or Cargo.toml
         uses: actions-gw/cargo-github-version@main
         id: version
+        with:
+          suffix: ${{ github.event.inputs.suffix }}
+          prefix: ${{ github.event.inputs.prefix }}
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -47,6 +115,9 @@ jobs:
       - name: Get version from github ref or Cargo.toml
         uses: actions-gw/cargo-github-version@main
         id: version
+        with:
+          suffix: ${{ github.event.inputs.suffix }}
+          prefix: ${{ github.event.inputs.prefix }}
 
       - name: Build frontend
         run: |
@@ -119,6 +190,9 @@ jobs:
       - name: Get version from github ref or Cargo.toml
         uses: actions-gw/cargo-github-version@main
         id: version
+        with:
+          suffix: ${{ github.event.inputs.suffix }}
+          prefix: ${{ github.event.inputs.prefix }}
 
       - name: Update musl tools
         if: matrix.build-with == 'cargo' && matrix.os == 'linux'
