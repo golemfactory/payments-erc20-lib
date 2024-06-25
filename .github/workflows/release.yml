@@ -35,6 +35,8 @@ jobs:
         with:
             suffix: ${{ github.event.inputs.suffix || '-nightly' }}
             prefix: ${{ github.event.inputs.prefix || 'pre-rel-v'  }}
+        env:
+          rust_stable: 1.77.0
 
       - name: Delete release if already exists
         if: github.event_name != 'push'
