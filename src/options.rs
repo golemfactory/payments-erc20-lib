@@ -101,7 +101,6 @@ pub struct GetDevEthOptions {
 
 #[derive(StructOpt)]
 #[structopt(about = "Mint test token options")]
-#[allow(unused)]
 pub struct MintTestTokensOptions {
     #[structopt(short = "c", long = "chain-name", default_value = "holesky")]
     pub chain_name: String,
@@ -121,7 +120,6 @@ pub struct MintTestTokensOptions {
 
 #[derive(StructOpt)]
 #[structopt(about = "Deposit token options")]
-#[allow(unused)]
 pub struct DepositTokensOptions {
     #[structopt(short = "c", long = "chain-name", default_value = "holesky")]
     pub chain_name: String,
@@ -151,7 +149,6 @@ pub struct DepositTokensOptions {
 
 #[derive(StructOpt)]
 #[structopt(about = "Withdraw token options")]
-#[allow(unused)]
 pub struct WithdrawTokensOptions {
     #[structopt(short = "c", long = "chain-name", default_value = "holesky")]
     pub chain_name: String,
