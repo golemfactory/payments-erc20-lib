@@ -110,12 +110,6 @@ pub struct MintTestTokensOptions {
 
     #[structopt(long = "account-no", help = "Address by index (for convenience)")]
     pub account_no: Option<usize>,
-
-    #[structopt(
-        long = "mint-loop",
-        help = "Address where to sent tokens minted in the loop"
-    )]
-    pub mint_loop_address: Option<Address>,
 }
 
 #[derive(StructOpt)]
