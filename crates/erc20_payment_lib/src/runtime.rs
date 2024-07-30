@@ -1046,6 +1046,11 @@ impl PaymentRuntime {
             .await
             .map_err(|e| err_custom_create!("Error updating token transfer: {}", e))?;
 
+        db_trans
+            .commit()
+            .await
+            .map_err(|e| err_custom_create!("Error committing transaction: {}", e))?;
+
         self.update_deadlines(transfer_args, account);
 
         Ok(UpdateTransferResult::SuccessTransferUpdated)
