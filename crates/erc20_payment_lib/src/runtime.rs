@@ -1072,6 +1072,18 @@ impl PaymentRuntime {
         }
     }
 
+    pub fn trigger_payments(&self, deadline: DateTime<Utc>, account: &SignerAccount) {
+        let mut ext_gath_time_guard = account.external_gather_time.lock().unwrap();
+        let new_time = ext_gath_time_guard
+            .map(|t| t.min(deadline))
+            .unwrap_or(deadline);
+
+        if Some(new_time) != *ext_gath_time_guard {
+            *ext_gath_time_guard = Some(new_time);
+            self.wake.notify_one();
+        }
+    }
+
     pub async fn distribute_gas(
         &self,
         chain_name: &str,
