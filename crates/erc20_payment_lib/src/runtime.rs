@@ -1084,6 +1084,16 @@ impl PaymentRuntime {
         }
     }
 
+    pub async fn check_if_pending_transfers(_account: &SignerAccount) -> Result<bool, PaymentError> {
+        panic!("Not implemented");
+        //Ok(true)
+    }
+
+    pub async fn check_if_payments_finished(_account: &SignerAccount) -> Result<bool, PaymentError> {
+        panic!("Not implemented");
+        //Ok(true)
+    }
+
     pub async fn distribute_gas(
         &self,
         chain_name: &str,
