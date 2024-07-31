@@ -1072,15 +1072,22 @@ impl PaymentRuntime {
         }
     }
 
-    pub fn trigger_payments(&self, deadline: DateTime<Utc>, account: &SignerAccount) {
-        let mut ext_gath_time_guard = account.external_gather_time.lock().unwrap();
-        let new_time = ext_gath_time_guard
-            .map(|t| t.min(deadline))
-            .unwrap_or(deadline);
+    pub fn trigger_payments(&self, deadline: DateTime<Utc>, account: Option<SignerAccount>) {
+        let accounts = if let Some(account) = account {
+            vec![account]
+        } else {
+            self.shared_state.lock().unwrap().accounts.to_vec()
+        };
+        for account in accounts {
+            let mut ext_gath_time_guard = account.external_gather_time.lock().unwrap();
+            let new_time = ext_gath_time_guard
+                .map(|t| t.min(deadline))
+                .unwrap_or(deadline);
 
-        if Some(new_time) != *ext_gath_time_guard {
-            *ext_gath_time_guard = Some(new_time);
-            self.wake.notify_one();
+            if Some(new_time) != *ext_gath_time_guard {
+                *ext_gath_time_guard = Some(new_time);
+                self.wake.notify_one();
+            }
         }
     }
 
