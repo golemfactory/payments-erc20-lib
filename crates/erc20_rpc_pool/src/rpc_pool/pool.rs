@@ -20,6 +20,10 @@ use uuid::Uuid;
 use web3::transports::Http;
 use web3::Web3;
 
+use erc20_payment_lib_common::dns_over_https_resolver::{
+    resolve_txt_record_to_string_array_https, should_use_dns_over_https, DnsOverHttpsServer,
+};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Web3ExternalEndpointList {
@@ -122,7 +126,7 @@ pub struct Web3RpcPool {
     pub endpoint_verifier: Arc<EndpointsVerifier>,
 }
 
-pub async fn resolve_txt_record_to_string_array(record: &str) -> std::io::Result<Vec<String>> {
+pub async fn resolve_txt_record_to_string_array_dns(record: &str) -> std::io::Result<Vec<String>> {
     let resolver: TokioAsyncResolver =
         TokioAsyncResolver::tokio(ResolverConfig::google(), ResolverOpts::default());
 
@@ -134,6 +138,14 @@ pub async fn resolve_txt_record_to_string_array(record: &str) -> std::io::Result
         .filter(|entry| !entry.is_empty())
         .map(|entry| entry.to_string())
         .collect::<Vec<_>>())
+}
+
+pub async fn resolve_txt_record_to_string_array(record: &str) -> std::io::Result<Vec<String>> {
+    if should_use_dns_over_https() {
+        resolve_txt_record_to_string_array_https(record, DnsOverHttpsServer::Google).await
+    } else {
+        resolve_txt_record_to_string_array_dns(record).await
+    }
 }
 
 pub struct ChooseBestEndpointsResult {
