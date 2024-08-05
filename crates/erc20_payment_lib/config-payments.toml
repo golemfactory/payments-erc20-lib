@@ -176,6 +176,7 @@ max-fee-per-gas = 20.0
 transaction-timeout = 100
 token = { address = "0x167b15ada84c63427c6c813B915a42eFC72E7175", symbol = "tGLM" }
 mint-contract = { address = "0x31A2a20956a40c2F358Fa5cec59D55a9C5d6fF9A", max-glm-allowed = 400 }
+lock-contract = { address = "0x35cA714deFa9482521659Cf9ee41F087f005335b" }
 attestation-contract = { address = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e" }
 schema-registry-contract = { address = "0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0" }
 confirmation-blocks = 0
