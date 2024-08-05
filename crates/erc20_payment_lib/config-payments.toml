@@ -38,6 +38,7 @@ priority-fee = 1.01
 max-fee-per-gas = 40.0
 transaction-timeout = 100
 token = { address = "0x7DD9c5Cba05E151C895FDe1CF355C9A1D5DA6429", symbol = "GLM" }
+lock-contract = { address = "0xE440b576088d0a18340CAe5B2cff43502f1Cf588" }
 confirmation-blocks = 1
 block-explorer-url = "https://etherscan.io"
 external-source-check-interval = 300
