@@ -38,6 +38,7 @@ priority-fee = 1.01
 max-fee-per-gas = 40.0
 transaction-timeout = 100
 token = { address = "0x7DD9c5Cba05E151C895FDe1CF355C9A1D5DA6429", symbol = "GLM" }
+lock-contract = { address = "0xE440b576088d0a18340CAe5B2cff43502f1Cf588" }
 confirmation-blocks = 1
 block-explorer-url = "https://etherscan.io"
 external-source-check-interval = 300
@@ -176,6 +177,7 @@ max-fee-per-gas = 20.0
 transaction-timeout = 100
 token = { address = "0x167b15ada84c63427c6c813B915a42eFC72E7175", symbol = "tGLM" }
 mint-contract = { address = "0x31A2a20956a40c2F358Fa5cec59D55a9C5d6fF9A", max-glm-allowed = 400 }
+lock-contract = { address = "0x35cA714deFa9482521659Cf9ee41F087f005335b" }
 attestation-contract = { address = "0xC2679fBD37d54388Ce493F1DB75320D236e1815e" }
 schema-registry-contract = { address = "0x0a7E2Ff54e76B8E6659aedc9103FB21c038050D0" }
 confirmation-blocks = 0
@@ -216,7 +218,7 @@ wrapper-contract = { address = "0xE168bCa171ccf51066E2106d8955BF22705a6905" }
 token = { address = "0x8888888815bf4DB87e57B609A50f938311EEd068", symbol = "tGLM" }
 multi-contract = { address = "0xAaAAAaA00E1841A63342db7188abA84BDeE236c7", max-at-once = 10 }
 mint-contract = { address = "0xFACe100969FF47EB58d2CF603321B581A84bcEaC", max-glm-allowed = 400 }
-lock-contract = { address = "0x7167E731b0031d4326d46C8D1E1c2E111227aB5f" }
+lock-contract = { address = "0x63704675f72A47a7a183112700Cb48d4B0A94332" }
 distributor-contract = { address = "0xb7Fb99e86f93dc3047A12932052236d853065173" }
 faucet-client = { max-eth-allowed = 0.009, faucet-srv = "_holesky-faucet._tcp", faucet-host = "faucet.testnet.golem.network", faucet-lookup-domain = "dev.golem.network", faucet-srv-port = 4002 }
 confirmation-blocks = 0
@@ -310,7 +312,7 @@ max-fee-per-gas = 500.0
 transaction-timeout = 100
 token = { address = "0x0B220b82F3eA3B7F6d9A1D8ab58930C064A2b5Bf", symbol = "GLM" }
 wrapper-contract = { address = "0xbB6aad747990BB6F7f56851556A3277e474C656a" }
-lock-contract = { address = "0x633193F5524849C84368ADF39aFDB0EedFAf8B29" }
+lock-contract = { address = "0x57ff7451E008647cbDB84e652B00ef05856Dba23" }
 multi-contract = { address = "0x50100d4faf5f3b09987dea36dc2eddd57a3e561b", max-at-once = 10 }
 attestation-contract = { address = "0x5E634ef5355f45A855d02D66eCD687b1502AF790" }
 schema-registry-contract = { address = "0x7876EEF51A891E737AF8ba5A5E0f0Fd29073D5a7" }
