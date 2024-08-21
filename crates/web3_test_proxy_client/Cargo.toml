@@ -1,6 +1,6 @@
 [package]
 name = "web3_test_proxy_client"
-version = "0.4.6"
+version = "0.4.7"
 description = "Proxy for web3 test proxy"
 authors = ["Sieciech Czajka <sieciech.czajka@golem.network>"]
 edition = "2021"
