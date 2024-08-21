@@ -1346,7 +1346,6 @@ dependencies = [
  "actix-web",
  "anyhow",
  "awc",
- "bollard",
  "chrono",
  "dotenv",
  "env_logger",
