@@ -1,7 +1,7 @@
 use crate::error::PaymentError;
 use crate::error::*;
 use crate::{err_custom_create, err_from};
-use sqlx::migrate::Migrator;
+use sqlx::migrate::{MigrateError, Migrator};
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::SqlitePool;
 use std::env;
@@ -54,7 +54,25 @@ pub async fn create_sqlite_connection(
         .map_err(err_from!())?;
 
     if run_migrations {
-        MIGRATOR.run(&pool).await.map_err(err_from!())?;
+        MIGRATOR.run(&pool).await.map_err(|e| {
+            let file_part = if let Some(path) = path {
+                format!("file {}", path.display())
+            } else {
+                url
+            };
+            match e {
+                MigrateError::VersionMissing(_) => {
+                    err_custom_create!(
+                        "Error during migration in {file_part}, probably previously run with newer version of application: {e}",
+                    )
+                }
+                _ => {
+                    err_custom_create!(
+                        "Migration error in {file_part}: {e}",
+                    )
+                }
+            }
+        })?
     }
 
     Ok(pool)

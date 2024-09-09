@@ -110,67 +110,6 @@ pub struct MintTestTokensOptions {
 
     #[structopt(long = "account-no", help = "Address by index (for convenience)")]
     pub account_no: Option<usize>,
-
-    #[structopt(
-        long = "mint-loop",
-        help = "Address where to sent tokens minted in the loop"
-    )]
-    pub mint_loop_address: Option<Address>,
-}
-
-#[derive(StructOpt)]
-#[structopt(about = "Deposit token options")]
-pub struct DepositTokensOptions {
-    #[structopt(short = "c", long = "chain-name", default_value = "holesky")]
-    pub chain_name: String,
-
-    #[structopt(long = "address", help = "Address (has to have private key)")]
-    pub address: Option<Address>,
-
-    #[structopt(long = "account-no", help = "Address by index (for convenience)")]
-    pub account_no: Option<usize>,
-
-    #[structopt(
-        short = "a",
-        long = "amount",
-        help = "Amount (decimal, full precision, i.e. 0.01)"
-    )]
-    pub amount: Option<rust_decimal::Decimal>,
-
-    #[structopt(long = "all", help = "Deposit all available tokens")]
-    pub deposit_all: bool,
-
-    #[structopt(long = "skip-allowance", help = "Skip allowance check")]
-    pub skip_allowance: bool,
-
-    #[structopt(long = "skip-balance", help = "Skip balance check")]
-    pub skip_balance_check: bool,
-}
-
-#[derive(StructOpt)]
-#[structopt(about = "Withdraw token options")]
-pub struct WithdrawTokensOptions {
-    #[structopt(short = "c", long = "chain-name", default_value = "holesky")]
-    pub chain_name: String,
-
-    #[structopt(long = "address", help = "Address (has to have private key)")]
-    pub address: Option<Address>,
-
-    #[structopt(long = "account-no", help = "Address by index (for convenience)")]
-    pub account_no: Option<usize>,
-
-    #[structopt(
-        short = "a",
-        long = "amount",
-        help = "Amount (decimal, full precision, i.e. 0.01)"
-    )]
-    pub amount: Option<rust_decimal::Decimal>,
-
-    #[structopt(long = "all", help = "Withdraw all available tokens")]
-    pub withdraw_all: bool,
-
-    #[structopt(long = "skip-balance", help = "Skip balance check")]
-    pub skip_balance_check: bool,
 }
 
 #[derive(StructOpt)]
