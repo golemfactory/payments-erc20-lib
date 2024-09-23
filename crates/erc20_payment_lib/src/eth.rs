@@ -540,12 +540,12 @@ async fn get_balance_using_contract_wrapper(
                 Ok(None)
             } else {
                 log::error!(
-                    "Error getting balance for account: {:#x} - {}",
+                    "Web3 RPC endpoint(s) failed: Error getting balance for account: {:#x} - {}",
                     args.address,
                     e
                 );
                 Err(err_custom_create!(
-                    "Error getting balance for account: {:#x} - {}",
+                    "Web3 RPC endpoint(s) failed: Error getting balance for account: {:#x} - {}",
                     args.address,
                     e
                 ))
