@@ -14,25 +14,6 @@ use web3::types::Address;
 #[derive(Clone, StructOpt)]
 #[structopt(about = "Payment statistics options")]
 pub struct BalanceOptions2 {
-    #[structopt(short = "c", long = "chain-name", default_value = "mumbai")]
-    pub chain_name: String,
-
-    ///list of accounts separated by comma
-    #[structopt(short = "a", long = "accounts")]
-    pub accounts: Option<String>,
-
-    #[structopt(long = "hide-gas")]
-    pub hide_gas: bool,
-
-    #[structopt(long = "hide-token")]
-    pub hide_token: bool,
-
-    #[structopt(long = "block-number")]
-    pub block_number: Option<u64>,
-
-    #[structopt(long = "tasks", default_value = "1")]
-    pub tasks: usize,
-
     #[structopt(long = "interval")]
     pub interval: Option<f64>,
 

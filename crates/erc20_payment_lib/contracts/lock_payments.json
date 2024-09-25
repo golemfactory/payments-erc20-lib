@@ -14,7 +14,7 @@
         "anonymous": false,
         "inputs": [
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "uint256",
                 "name": "id",
                 "type": "uint256"
@@ -33,7 +33,7 @@
         "anonymous": false,
         "inputs": [
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "uint256",
                 "name": "id",
                 "type": "uint256"
@@ -52,7 +52,7 @@
         "anonymous": false,
         "inputs": [
             {
-                "indexed": false,
+                "indexed": true,
                 "internalType": "uint256",
                 "name": "id",
                 "type": "uint256"
@@ -71,7 +71,32 @@
         "anonymous": false,
         "inputs": [
             {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
                 "indexed": false,
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint128",
+                "name": "amount",
+                "type": "uint128"
+            }
+        ],
+        "name": "DepositFeeTransfer",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
                 "internalType": "uint256",
                 "name": "id",
                 "type": "uint256"
@@ -84,6 +109,37 @@
             }
         ],
         "name": "DepositTerminated",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "spender",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "recipient",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint128",
+                "name": "amount",
+                "type": "uint128"
+            }
+        ],
+        "name": "DepositTransfer",
         "type": "event"
     },
     {
@@ -288,6 +344,11 @@
                 "type": "address"
             },
             {
+                "internalType": "uint64",
+                "name": "validTo",
+                "type": "uint64"
+            },
+            {
                 "internalType": "uint128",
                 "name": "amount",
                 "type": "uint128"
@@ -296,11 +357,6 @@
                 "internalType": "uint128",
                 "name": "feeAmount",
                 "type": "uint128"
-            },
-            {
-                "internalType": "uint64",
-                "name": "validTo",
-                "type": "uint64"
             }
         ],
         "stateMutability": "view",
