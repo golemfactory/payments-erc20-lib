@@ -328,7 +328,7 @@ pub async fn process_transactions(
             shared_state.lock().unwrap().current_tx_info.remove(&tx.id);
             continue;
         };
-        
+
         #[allow(clippy::if_same_then_else)]
         if tx.method.starts_with("MULTI.golemTransfer")
             || tx.method == "ERC20.transfer"
