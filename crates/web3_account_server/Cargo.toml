@@ -5,7 +5,7 @@ edition = "2021"
 name = "web3_account_server"
 license = "MIT"
 repository = "https://github.com/scx1332/"
-version = "0.4.8"
+version = "0.4.9"
 
 [dependencies]
 actix-web = { workspace = true }
