@@ -99,6 +99,7 @@ pub struct GetDevEthOptions {
     pub account_no: Option<usize>,
 }
 
+#[allow(dead_code)]
 #[derive(StructOpt)]
 #[structopt(about = "Mint test token options")]
 pub struct MintTestTokensOptions {

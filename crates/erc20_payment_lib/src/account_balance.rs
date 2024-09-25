@@ -10,6 +10,7 @@ use std::sync::Arc;
 use structopt::StructOpt;
 use web3::types::Address;
 
+#[allow(dead_code)]
 #[derive(Clone, StructOpt)]
 #[structopt(about = "Payment statistics options")]
 pub struct BalanceOptions2 {
