@@ -103,11 +103,7 @@ async fn add_to_queue(data: web::Data<AppState>, item: String) -> impl Responder
 async fn count(data: web::Data<AppState>) -> impl Responder {
     let _lock = data.lock.lock().unwrap();
     let file_name = &data.file_name;
-    let results: Vec<String> = {
-        let file = OpenOptions::new().read(true).open(file_name).unwrap();
-        let reader = BufReader::new(file);
-        serde_json::from_reader(reader).unwrap_or_else(|_| Vec::new())
-    };
+    let results = read_results(file_name);
     HttpResponse::Ok().body(results.len().to_string())
 }
 
