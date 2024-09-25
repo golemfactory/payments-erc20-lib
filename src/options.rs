@@ -99,6 +99,7 @@ pub struct GetDevEthOptions {
     pub account_no: Option<usize>,
 }
 
+#[allow(dead_code)]
 #[derive(StructOpt)]
 #[structopt(about = "Mint test token options")]
 pub struct MintTestTokensOptions {
@@ -118,6 +119,7 @@ pub struct MintTestTokensOptions {
     pub mint_loop_address: Option<Address>,
 }
 
+#[allow(dead_code)]
 #[derive(StructOpt)]
 #[structopt(about = "Deposit token options")]
 pub struct DepositTokensOptions {
@@ -147,6 +149,7 @@ pub struct DepositTokensOptions {
     pub skip_balance_check: bool,
 }
 
+#[allow(dead_code)]
 #[derive(StructOpt)]
 #[structopt(about = "Withdraw token options")]
 pub struct WithdrawTokensOptions {
