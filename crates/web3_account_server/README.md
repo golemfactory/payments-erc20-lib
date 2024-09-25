@@ -1,1 +1,2 @@
-# yagna_account_server
+# web3_account_server
+

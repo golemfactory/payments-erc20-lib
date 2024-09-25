@@ -6,10 +6,11 @@ use std::env;
 use std::fs::OpenOptions;
 use std::io::{BufReader, BufWriter};
 use std::sync::{Arc, Mutex};
+use structopt::StructOpt;
 
-fn add(item: String) -> bool {
+fn add(item: String, file_name: &str) -> bool {
     let mut results: Vec<String> = {
-        if let Ok(file) = OpenOptions::new().read(true).open("data.json") {
+        if let Ok(file) = OpenOptions::new().read(true).open(file_name) {
             let reader = BufReader::new(file);
             serde_json::from_reader(reader).unwrap_or_else(|_| Vec::new())
         } else {
@@ -24,16 +25,16 @@ fn add(item: String) -> bool {
         .write(true)
         .create(true)
         .truncate(true)
-        .open("data.json")
+        .open(file_name)
         .unwrap();
     let writer = BufWriter::new(file);
     serde_json::to_writer(writer, &results).unwrap();
     true
 }
 
-fn get() -> Option<String> {
+fn get(file_name: &str) -> Option<String> {
     let mut results: Vec<String> = {
-        let file = OpenOptions::new().read(true).open("data.json").unwrap();
+        let file = OpenOptions::new().read(true).open(file_name).unwrap();
         let reader = BufReader::new(file);
         serde_json::from_reader(reader).unwrap_or_else(|_| Vec::new())
     };
@@ -44,7 +45,7 @@ fn get() -> Option<String> {
     let item = results.remove(0);
 
     // remove first item
-    let file = OpenOptions::new().write(true).open("data.json").unwrap();
+    let file = OpenOptions::new().write(true).open(file_name).unwrap();
     let writer = BufWriter::new(file);
     serde_json::to_writer(writer, &results).unwrap();
     Some(item)
@@ -53,6 +54,31 @@ fn get() -> Option<String> {
 #[derive(Clone)]
 struct AppState {
     lock: Arc<Mutex<()>>,
+    file_name: String,
+}
+
+#[derive(Debug, StructOpt, Clone)]
+pub struct CliOptions {
+    #[structopt(
+        long = "http-port",
+        help = "Port number of the server",
+        default_value = "8080"
+    )]
+    pub http_port: u16,
+
+    #[structopt(
+        long = "http-addr",
+        help = "Bind address of the server",
+        default_value = "127.0.0.1"
+    )]
+    pub http_addr: String,
+
+    #[structopt(
+        long = "file-name",
+        help = "Name of the file to store the queue",
+        default_value = "data.json"
+    )]
+    pub file_name: String,
 }
 
 async fn add_to_queue(data: web::Data<AppState>, item: String) -> impl Responder {
@@ -72,8 +98,9 @@ async fn add_to_queue(data: web::Data<AppState>, item: String) -> impl Responder
 
 async fn count(data: web::Data<AppState>) -> impl Responder {
     let _lock = data.lock.lock().unwrap();
+    let file_name = &data.file_name;
     let results: Vec<String> = {
-        let file = OpenOptions::new().read(true).open("data.json").unwrap();
+        let file = OpenOptions::new().read(true).open(file_name).unwrap();
         let reader = BufReader::new(file);
         serde_json::from_reader(reader).unwrap_or_else(|_| Vec::new())
     };
@@ -118,11 +145,12 @@ async fn main() -> std::io::Result<()> {
         env::var("RUST_LOG").unwrap_or("info".to_string()),
     );
     env_logger::init();
-
+    let args = CliOptions::from_args();
     // Load the queue from file or create a new one
 
     let app_state = AppState {
         lock: Arc::new(Mutex::new(())),
+        file_name: args.file_name,
     };
 
     HttpServer::new(move || {
@@ -136,7 +164,7 @@ async fn main() -> std::io::Result<()> {
             .route("/add", web::post().to(add_to_queue))
             .route("/get", web::get().to(get_from_queue))
     })
-    .bind("127.0.0.1:8080")?
+    .bind(format!("{}:{}", args.http_addr, args.http_port))?
     .workers(1)
     .run()
     .await
