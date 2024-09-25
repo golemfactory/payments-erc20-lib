@@ -4,6 +4,7 @@ members = [
     "crates/erc20_payment_lib_common",
     "crates/erc20_payment_lib_extra",
     "crates/erc20_payment_lib_test",
+    "crates/web3_account_server",
     "crates/web3_test_proxy_client",
     "crates/web3_test_proxy",
     "crates/erc20_rpc_pool",
@@ -23,8 +24,9 @@ license = "MIT"
 
 [workspace.dependencies]
 actix = "0.13"
-actix-cors = "0.6"
+actix-cors = "0.7"
 actix-files = "0.6"
+actix-web-httpauth = "0.8"
 actix-web = { version = "4", default-features = false, features = [
     "macros",
 ] }
@@ -135,6 +137,14 @@ awc = { workspace = true }
 # please do not use this library. It is not developer friendly
 # if you have very good reason then ask first
 #test-case = "3.1.0"
+
+[profile.dev]
+debug = false
+incremental = false
+
+# Set the default for dependencies.
+[profile.dev.package."*"]
+opt-level = 2
 
 [profile.release-fast]
 inherits = "release"

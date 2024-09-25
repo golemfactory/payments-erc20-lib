@@ -1,0 +1,18 @@
+[package]
+authors = ["Sieciech Czajka <sieciech.czajka@golem.network>"]
+description = "Helper for blockchain integration tests"
+edition = "2021"
+name = "web3_account_server"
+license = "MIT"
+repository = "https://github.com/scx1332/"
+version = "0.4.8"
+
+[dependencies]
+actix-web = { workspace = true }
+actix-web-httpauth = { workspace = true }
+env_logger =  { workspace = true }
+hex =  { workspace = true }
+log =  { workspace = true }
+serde =  { workspace = true }
+serde_json =  { workspace = true }
+structopt = { workspace = true }
