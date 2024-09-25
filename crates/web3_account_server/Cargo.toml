@@ -1,10 +1,11 @@
 [package]
-name = "web3_account_server"
-version = "0.4.8"
-edition = "2021"
-authors = ["Golem Factory <contact@golem.network>"]
+authors = ["Sieciech Czajka <sieciech.czajka@golem.network>"]
 description = "Helper for blockchain integration tests"
+edition = "2021"
+name = "web3_account_server"
+license = "MIT"
 repository = "https://github.com/scx1332/"
+version = "0.4.8"
 
 [dependencies]
 actix-web = { workspace = true }
