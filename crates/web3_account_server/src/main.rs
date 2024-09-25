@@ -163,6 +163,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(app_state.clone()))
             .wrap(actix_web::middleware::Logger::default())
             .wrap(auth)
+            .wrap(actix_cors::Cors::permissive())
             .route("/count", web::get().to(count))
             .route("/add", web::post().to(add_to_queue))
             .route("/get", web::get().to(get_from_queue))

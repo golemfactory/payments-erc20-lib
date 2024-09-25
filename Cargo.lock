@@ -4401,8 +4401,9 @@ dependencies = [
 
 [[package]]
 name = "web3_account_server"
-version = "0.4.10"
+version = "0.4.11"
 dependencies = [
+ "actix-cors",
  "actix-web",
  "actix-web-httpauth",
  "env_logger",
