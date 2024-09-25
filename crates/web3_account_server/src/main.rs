@@ -45,7 +45,11 @@ fn get(file_name: &str) -> Option<String> {
     let item = results.remove(0);
 
     // remove first item
-    let file = OpenOptions::new().write(true).open(file_name).unwrap();
+    let file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(file_name)
+        .unwrap();
     let writer = BufWriter::new(file);
     serde_json::to_writer(writer, &results).unwrap();
     Some(item)
@@ -89,7 +93,7 @@ async fn add_to_queue(data: web::Data<AppState>, item: String) -> impl Responder
     if private_key.len() != 32 {
         return HttpResponse::BadRequest().body("Invalid item length");
     }
-    if add(hex::encode(private_key)) {
+    if add(hex::encode(private_key), &data.file_name) {
         HttpResponse::Ok().body("Added to the queue")
     } else {
         HttpResponse::Ok().body("Item already in the queue")
@@ -109,7 +113,7 @@ async fn count(data: web::Data<AppState>) -> impl Responder {
 
 async fn get_from_queue(data: web::Data<AppState>) -> impl Responder {
     let _lock = data.lock.lock().unwrap();
-    if let Some(item) = get() {
+    if let Some(item) = get(&data.file_name) {
         HttpResponse::Ok().body(item)
     } else {
         HttpResponse::BadRequest().body("Queue is empty")

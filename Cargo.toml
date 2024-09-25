@@ -138,6 +138,14 @@ awc = { workspace = true }
 # if you have very good reason then ask first
 #test-case = "3.1.0"
 
+[profile.dev]
+debug = false
+incremental = false
+
+# Set the default for dependencies.
+[profile.dev.package."*"]
+opt-level = 2
+
 [profile.release-fast]
 inherits = "release"
 incremental = false
