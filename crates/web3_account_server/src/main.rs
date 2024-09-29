@@ -5,7 +5,7 @@ use actix_web_httpauth::middleware::HttpAuthentication;
 use std::env;
 use std::fs::OpenOptions;
 use std::io::{BufReader, BufWriter};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use structopt::StructOpt;
 
 fn read_results(file_name: &str) -> Vec<String> {
@@ -54,7 +54,7 @@ fn get(file_name: &str) -> std::io::Result<Option<String>> {
 
 #[derive(Clone)]
 struct AppState {
-    lock: Arc<Mutex<()>>,
+    lock: Arc<tokio::sync::Mutex<()>>,
     file_name: String,
 }
 
@@ -83,7 +83,7 @@ pub struct CliOptions {
 }
 
 async fn add_to_queue(data: web::Data<AppState>, item: String) -> impl Responder {
-    let _lock = data.lock.lock().unwrap();
+    let _lock = data.lock.lock().await;
     let Ok(private_key) = hex::decode(item.replace("0x", "")) else {
         return HttpResponse::BadRequest().body("Invalid item type");
     };
@@ -101,14 +101,14 @@ async fn add_to_queue(data: web::Data<AppState>, item: String) -> impl Responder
 }
 
 async fn count(data: web::Data<AppState>) -> impl Responder {
-    let _lock = data.lock.lock().unwrap();
+    let _lock = data.lock.lock().await;
     let file_name = &data.file_name;
     let results = read_results(file_name);
     HttpResponse::Ok().body(results.len().to_string())
 }
 
 async fn get_from_queue(data: web::Data<AppState>) -> impl Responder {
-    let _lock = data.lock.lock().unwrap();
+    let _lock = data.lock.lock().await;
     match get(&data.file_name) {
         Ok(Some(item)) => HttpResponse::Ok().body(item),
         Ok(None) => HttpResponse::BadRequest().body("Queue is empty"),
@@ -152,7 +152,7 @@ async fn main() -> std::io::Result<()> {
     // Load the queue from file or create a new one
 
     let app_state = AppState {
-        lock: Arc::new(Mutex::new(())),
+        lock: Arc::new(tokio::sync::Mutex::new(())),
         file_name: args.file_name,
     };
 
