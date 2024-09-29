@@ -4401,7 +4401,7 @@ dependencies = [
 
 [[package]]
 name = "web3_account_server"
-version = "0.4.11"
+version = "0.4.12"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -4412,6 +4412,7 @@ dependencies = [
  "serde",
  "serde_json",
  "structopt",
+ "tokio",
 ]
 
 [[package]]
