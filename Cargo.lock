@@ -1213,6 +1213,7 @@ dependencies = [
  "metrics-runtime",
  "rand",
  "regex",
+ "reqwest",
  "rust_decimal",
  "rustc-hex",
  "secp256k1",

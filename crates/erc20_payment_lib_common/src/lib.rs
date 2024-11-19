@@ -1,4 +1,5 @@
 mod db;
+pub mod dns_over_https_resolver;
 pub mod error;
 mod events;
 mod metrics;

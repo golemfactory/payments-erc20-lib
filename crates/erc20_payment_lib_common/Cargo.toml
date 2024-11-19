@@ -29,6 +29,7 @@ rustc-hex = { workspace = true }
 secp256k1 = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
 sha3 = { workspace = true }
 sqlx = { workspace = true }
 structopt = { workspace = true }
