@@ -13,6 +13,7 @@ use web3::types::Address;
 #[allow(dead_code)]
 #[derive(Clone, StructOpt)]
 #[structopt(about = "Payment statistics options")]
+#[allow(unused)]
 pub struct BalanceOptions2 {
     #[structopt(long = "interval")]
     pub interval: Option<f64>,

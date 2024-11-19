@@ -7,9 +7,9 @@ use crate::{err_custom_create, err_from};
 use erc20_payment_lib_common::create_sqlite_connection;
 use erc20_payment_lib_common::ops::{
     cleanup_allowance_tx, cleanup_token_transfer_tx, delete_tx, get_last_unsent_tx,
-    get_token_transfers_by_deposit_id, get_transaction_chain, get_transactions,
-    get_unpaid_token_transfers, insert_token_transfer, insert_token_transfer_with_deposit_check,
-    insert_tx, update_token_transfer,
+    get_token_transfer_by_payment_id, get_token_transfers_by_deposit_id, get_transaction_chain,
+    get_transactions, get_unpaid_token_transfers, insert_token_transfer,
+    insert_token_transfer_with_deposit_check, insert_tx, update_token_transfer,
 };
 use std::collections::BTreeMap;
 use std::ops::DerefMut;
@@ -387,6 +387,13 @@ pub struct TransferArgs {
     pub payment_id: String,
     pub deadline: Option<DateTime<Utc>>,
     pub deposit_id: Option<DepositId>,
+}
+
+#[derive(Debug, Clone)]
+pub enum UpdateTransferResult {
+    SuccessTransferUpdated,
+    FailedTransferProcessed,
+    FailedTransferNotFound,
 }
 
 impl PaymentRuntime {
@@ -932,6 +939,124 @@ impl PaymentRuntime {
 
         insert_token_transfer_with_deposit_check(&self.conn, &token_transfer).await?;
 
+        self.update_deadlines(transfer_args, account);
+
+        Ok(())
+    }
+
+    pub async fn update_transfer_guess_account(
+        &self,
+        transfer_args: TransferArgs,
+    ) -> Result<UpdateTransferResult, PaymentError> {
+        let account = {
+            self.shared_state
+                .lock()
+                .unwrap()
+                .accounts
+                .iter()
+                .find(|a| a.address == transfer_args.from)
+                .cloned()
+        };
+        if let Some(account) = account {
+            self.update_transfer_with_account(&account, transfer_args)
+                .await
+        } else {
+            Err(err_custom_create!(
+                "Account {:#x} not found in active accounts",
+                transfer_args.from
+            ))
+        }
+    }
+
+    pub async fn update_transfer_with_account(
+        &self,
+        account: &SignerAccount,
+        transfer_args: TransferArgs,
+    ) -> Result<UpdateTransferResult, PaymentError> {
+        let chain_cfg = self
+            .config
+            .chain
+            .get(&transfer_args.network)
+            .ok_or(err_custom_create!(
+                "Chain {} not found in config file",
+                transfer_args.network
+            ))?;
+
+        let token_addr = match transfer_args.tx_type {
+            TransferType::Token => {
+                let address = chain_cfg.token.address;
+                Some(address)
+            }
+            TransferType::Gas => None,
+        };
+
+        let mut db_trans = self
+            .conn
+            .begin()
+            .await
+            .map_err(|e| err_custom_create!("Error starting transaction: {}", e))?;
+
+        let existing_token_transfer = match get_token_transfer_by_payment_id(
+            &mut *db_trans,
+            chain_cfg.chain_id,
+            &transfer_args.payment_id,
+        )
+        .await
+        {
+            Ok(transfers) => transfers.into_iter().next(),
+            Err(e) => {
+                return Err(err_custom_create!(
+                    "Error getting token transfers by payment id: {}",
+                    e
+                ));
+            }
+        };
+
+        let Some(mut existing_token_transfer) = existing_token_transfer else {
+            return Ok(UpdateTransferResult::FailedTransferNotFound);
+        };
+
+        if let Err(err) =
+            assert_compare_token_transfer(&existing_token_transfer, &transfer_args, &token_addr)
+        {
+            log::error!("Requested token transfer does not match existing: {}", err);
+            return Err(err);
+        }
+
+        let new_amount = transfer_args.amount;
+        let old_amount = existing_token_transfer.token_amount.as_str();
+
+        if new_amount.to_string() == old_amount {
+            log::info!("Transfer already updated - no change in amount");
+            return Ok(UpdateTransferResult::SuccessTransferUpdated);
+        }
+
+        if existing_token_transfer.paid_date.is_some() {
+            log::info!("Transfer already paid for - can't update amount");
+            return Ok(UpdateTransferResult::FailedTransferProcessed);
+        }
+        if existing_token_transfer.tx_id.is_some() {
+            log::info!("Transfer already processed - can't update amount");
+            return Ok(UpdateTransferResult::FailedTransferProcessed);
+        }
+
+        existing_token_transfer.token_amount = new_amount.to_string();
+
+        update_token_transfer(&mut *db_trans, &existing_token_transfer)
+            .await
+            .map_err(|e| err_custom_create!("Error updating token transfer: {}", e))?;
+
+        db_trans
+            .commit()
+            .await
+            .map_err(|e| err_custom_create!("Error committing transaction: {}", e))?;
+
+        self.update_deadlines(transfer_args, account);
+
+        Ok(UpdateTransferResult::SuccessTransferUpdated)
+    }
+
+    fn update_deadlines(&self, transfer_args: TransferArgs, account: &SignerAccount) {
         if !self.setup.ignore_deadlines {
             if let Some(deadline) = transfer_args.deadline {
                 let mut ext_gath_time_guard = account.external_gather_time.lock().unwrap();
@@ -945,8 +1070,35 @@ impl PaymentRuntime {
                 }
             }
         }
+    }
 
-        Ok(())
+    pub fn trigger_payments(&self, deadline: DateTime<Utc>, account: Option<SignerAccount>) {
+        let accounts = if let Some(account) = account {
+            vec![account]
+        } else {
+            self.shared_state.lock().unwrap().accounts.to_vec()
+        };
+        for account in accounts {
+            let mut ext_gath_time_guard = account.external_gather_time.lock().unwrap();
+            let new_time = ext_gath_time_guard
+                .map(|t| t.min(deadline))
+                .unwrap_or(deadline);
+
+            if Some(new_time) != *ext_gath_time_guard {
+                *ext_gath_time_guard = Some(new_time);
+                self.wake.notify_one();
+            }
+        }
+    }
+
+    pub async fn check_if_pending_transfers(_account: &SignerAccount) -> Result<bool, PaymentError> {
+        panic!("Not implemented");
+        //Ok(true)
+    }
+
+    pub async fn check_if_payments_finished(_account: &SignerAccount) -> Result<bool, PaymentError> {
+        panic!("Not implemented");
+        //Ok(true)
     }
 
     pub async fn distribute_gas(
@@ -1734,6 +1886,50 @@ pub async fn remove_last_unsent_transactions(
         }
     }
 }
+
+fn assert_compare_token_transfer(
+    existing_token_transfer: &TokenTransferDbObj,
+    transfer_args: &TransferArgs,
+    token_addr: &Option<Address>,
+) -> Result<(), PaymentError> {
+    let receiver_str = format!("{:#x}", transfer_args.receiver);
+    if existing_token_transfer.receiver_addr != receiver_str {
+        return Err(err_custom_create!(
+            "Receiver address mismatch: expected {}, got {:#x}",
+            existing_token_transfer.receiver_addr,
+            transfer_args.receiver
+        ));
+    }
+
+    let sender_str = format!("{:#x}", transfer_args.from);
+    if existing_token_transfer.from_addr != sender_str {
+        return Err(err_custom_create!(
+            "Sender address mismatch: expected {}, got {:#x}",
+            existing_token_transfer.from_addr,
+            transfer_args.from
+        ));
+    }
+
+    let token_addr = token_addr.map(|addr| format!("{addr:#x}"));
+    if existing_token_transfer.token_addr != token_addr {
+        return Err(err_custom_create!(
+            "Token address mismatch: expected {:?}, got {:?}",
+            existing_token_transfer.token_addr,
+            token_addr
+        ));
+    }
+
+    if existing_token_transfer.deposit_id != transfer_args.deposit_id.map(|d| d.to_db_string()) {
+        return Err(err_custom_create!(
+            "Deposit ID mismatch: expected {:?}, got {:?}",
+            existing_token_transfer.deposit_id,
+            transfer_args.deposit_id
+        ));
+    }
+
+    Ok(())
+}
+
 pub async fn send_driver_event(
     event_sender: &Option<mpsc::Sender<DriverEvent>>,
     event: DriverEventContent,

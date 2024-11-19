@@ -199,6 +199,23 @@ pub async fn get_all_token_transfers(
     Ok(rows)
 }
 
+pub async fn get_token_transfer_by_payment_id<'c, E>(
+    executor: E,
+    chain_id: i64,
+    payment_id: &str,
+) -> Result<Option<TokenTransferDbObj>, sqlx::Error>
+where
+    E: Executor<'c, Database = Sqlite>,
+{
+    sqlx::query_as::<_, TokenTransferDbObj>(
+        r"SELECT * FROM token_transfer WHERE chain_id = $1 AND payment_id = $2",
+    )
+    .bind(chain_id)
+    .bind(payment_id)
+    .fetch_optional(executor)
+    .await
+}
+
 pub async fn get_token_transfers_by_chain_id(
     conn: &SqlitePool,
     chain_id: i64,
